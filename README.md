@@ -4,9 +4,11 @@ If you like to keep your documentation in Git, love writing in markdown but are 
 
 This tool will render your markdown files to html and upload it to a page in your Confluence Cloud instance via the API. I haven't tested it on a self hosted instance so I'm don't know if that will work.
 
+It's now possible to create a build pipeline that creates the documentation for you in Confluence.
+
 Go to [https://id.atlassian.com/manage-profile/security/api-tokens](https://id.atlassian.com/manage-profile/security/api-tokens) and create an API token.
 
-The tool looks for a `confluence-config.yaml` file in the present directory with the configuration for which markdown files to render and which page ID to update with the content. There's an example in the repo.
+The tool looks for a `confluence-config.yaml` file in the present directory with the configuration for which markdown files to render and which page ID to update with the content. There's an example in the repo. **You will need to crate the page and get the page ID for the configuration file.**
 
 Run below example command to start the process.
 
