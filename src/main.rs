@@ -4,7 +4,7 @@ use structopt::StructOpt;
 #[derive(Debug, StructOpt)]
 #[structopt(
     name = "confluence-updater",
-    about = "Create or update a page in Confluence Cloud",
+    about = "Update content in Confluence Cloud",
     author = "Patrick Kerwood <patrick@kerwood.dk>"
 )]
 enum Opt {
@@ -32,7 +32,7 @@ enum Opt {
         #[structopt(
             short,
             long,
-            default_value = "./confluence-config.json",
+            default_value = "./confluence-config.yaml",
             env = "CU_CONFIG_PATH",
             help = "The path to the config file."
         )]

@@ -1,8 +1,8 @@
-use colored::*;
 use comrak::{markdown_to_html, ComrakOptions};
 use futures::future::try_join_all;
 use reqwest;
 use serde::{Deserialize, Serialize};
+use serde_yaml;
 use std::error::Error;
 use std::fs;
 use std::io;
@@ -55,6 +55,12 @@ pub struct Label {
 
 #[derive(Deserialize, Serialize, Debug)]
 #[serde(rename_all = "camelCase")]
+pub struct Pages {
+    content: Vec<Page>,
+}
+
+#[derive(Deserialize, Serialize, Debug)]
+#[serde(rename_all = "camelCase")]
 pub struct Page {
     file_path: String,
     title: String,
@@ -67,13 +73,13 @@ pub struct Confluence {
     user: String,
     secret: String,
     fqdn: String,
-    pages: Vec<Page>,
+    pages: Pages,
 }
 
 impl Confluence {
     pub fn new(user: String, secret: String, fqdn: String, config_path: String) -> Self {
         let pages = Self::get_config(&config_path).unwrap_or_else(|x| {
-            println!("{} [Error: {}]", "Could not read config file".red(), x);
+            println!("Could not read config file.\n[Error: {}]", x);
             process::exit(1)
         });
         Self {
@@ -84,10 +90,10 @@ impl Confluence {
         }
     }
 
-    fn get_config(config_path: &str) -> Result<Vec<Page>, io::Error> {
+    fn get_config(config_path: &str) -> Result<Pages, Box<dyn Error>> {
         let file = fs::File::open(config_path)?;
         let reader = BufReader::new(file);
-        let pages = serde_json::from_reader(reader)?;
+        let pages = serde_yaml::from_reader(reader)?;
         Ok(pages)
     }
 
@@ -100,20 +106,20 @@ impl Confluence {
             ))
             .basic_auth(&self.user, Some(&self.secret))
             .send()
-            .await?
-            .json::<serde_json::Value>()
             .await?;
 
-        // let version = response.get("version").ok_or(process::exit(1););
-        let version = match response.get("version") {
+        if !response.status().is_success() {
+            println!("[Reqwest Error] {}", response.status());
+            process::exit(2)
+        }
+
+        let json = response.json::<serde_json::Value>().await?;
+
+        let version = match json.get("version") {
             Some(x) => x.get("number").unwrap().as_u64().unwrap(),
             None => {
-                println!(
-                    "{} [ID: {}]",
-                    "Could not get the content version".red(),
-                    page_id
-                );
-                process::exit(1)
+                println!("Could not get the content version [ID: {}]", page_id);
+                process::exit(3)
             }
         };
         Ok(version + 1)
@@ -154,7 +160,7 @@ impl Confluence {
         client
             .put(format!(
                 "https://{}/wiki/rest/api/content/{}",
-                &self.fqdn, page.page_id
+                &self.fqdn, &page.page_id
             ))
             .basic_auth(&self.user, Some(&self.secret))
             .json(&payload)
@@ -163,9 +169,7 @@ impl Confluence {
 
         println!(
             "[ID:{}] :: Updated {} - {}",
-            page.page_id,
-            page.title.purple(),
-            page.file_path
+            page.page_id, page.title, page.file_path
         );
 
         Ok(())
@@ -174,11 +178,14 @@ impl Confluence {
     pub async fn update_pages(&self) -> Result<(), Box<dyn Error>> {
         let mut futures = Vec::<_>::new();
 
-        for page in self.pages.iter() {
+        for page in self.pages.content.iter() {
             futures.push(self.make_reqwest(page));
         }
 
-        try_join_all(futures).await?;
+        try_join_all(futures).await.unwrap_or_else(|x| {
+            println!("[Error] {}", x);
+            process::exit(4)
+        });
         Ok(())
     }
 }
