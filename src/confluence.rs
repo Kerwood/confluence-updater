@@ -18,6 +18,7 @@ pub struct Confluence {
     secret: String,
     fqdn: String,
     pages: Vec<Page>,
+    global_labels: Vec<String>,
 }
 
 #[derive(Deserialize)]
@@ -31,7 +32,13 @@ pub struct Version {
 }
 
 impl Confluence {
-    pub fn new(user: String, secret: String, fqdn: String, config_path: String) -> Self {
+    pub fn new(
+        user: String,
+        secret: String,
+        fqdn: String,
+        config_path: String,
+        global_labels: Vec<String>,
+    ) -> Self {
         let pages = Self::get_page_config(&config_path).unwrap_or_else(|x| {
             println!("Could not read config file.\n[Error: {}]", x.to_string());
             process::exit(1)
@@ -41,6 +48,7 @@ impl Confluence {
             secret,
             fqdn,
             pages,
+            global_labels,
         }
     }
 
@@ -59,6 +67,10 @@ impl Confluence {
         let file = fs::File::open(config_path)?;
         let reader = BufReader::new(file);
         let config: Config = serde_yaml::from_reader(reader)?;
+
+        // for page in config.content.iter() {
+        //     page.labels.append(&mut self.global_labels)
+        // }
         Ok(config.content)
     }
 
@@ -105,6 +117,7 @@ impl Confluence {
         let mut labels: Vec<String> = page.labels.iter().cloned().collect();
 
         labels.push(format!("sha:{}", html_sha));
+        labels.extend(self.global_labels.clone());
 
         let payload = ContentPayload::new(&page, version, &labels, &html);
 

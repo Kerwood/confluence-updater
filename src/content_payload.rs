@@ -72,7 +72,7 @@ impl ContentPayload {
 impl From<&String> for Label {
     fn from(label: &String) -> Self {
         Label {
-            name: label.to_owned(),
+            name: label.to_owned().replace(" ", "-"),
         }
     }
 }

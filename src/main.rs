@@ -42,6 +42,9 @@ enum Opt {
             help = "The path to the config file."
         )]
         config_path: String,
+
+        #[structopt(short, long = "label", help = "Add a label to all updating pages.")]
+        labels: Vec<String>,
     },
 }
 
@@ -53,8 +56,9 @@ async fn main() -> Result<(), String> {
             secret,
             fqdn,
             config_path,
+            labels,
         } => {
-            let con = Confluence::new(user, secret, fqdn, config_path);
+            let con = Confluence::new(user, secret, fqdn, config_path, labels);
             con.update_pages().await?;
         }
     }
