@@ -1,10 +1,12 @@
 # Confluence Updater
 
+[![forthebadge made-with-rust](http://ForTheBadge.com/images/badges/made-with-rust.svg)](https://www.rust-lang.org/)
+
 If you like to keep your documentation in Git, love writing in markdown but are somehow required to deliver documentation in Confluence, look no further.
 
-This tool will render your markdown files to html and upload it to a page in your Confluence Cloud instance via the API. I haven't tested it on a self hosted instance so I'm don't know if that will work.
+Confluence Updater will render your markdown files to HTML and upload it to a specific page in your Confluence Cloud instance. The tool will label each page with a SHA based on the page content. If the SHA hasn't changed since last update, the page will be skipped.
 
-It's now possible to create a build pipeline that creates the documentation for you in Confluence. You can find a how-to on my blog [https://linuxblog.xyz/posts/confluence-updater/](https://linuxblog.xyz/posts/confluence-updater/).
+It's now possible to create a build pipeline that uploads your Git documentation to your Confluence Cloud. You can find a how-to on my blog [https://linuxblog.xyz/posts/confluence-updater/](https://linuxblog.xyz/posts/confluence-updater/).
 
 Go to [https://id.atlassian.com/manage-profile/security/api-tokens](https://id.atlassian.com/manage-profile/security/api-tokens) and create an API token.
 
@@ -19,8 +21,8 @@ confluence-updater update -u your-user@example.org -s <api-token> --fqdn your-do
 You can use environment variables instead of parameters.
 
 ```
-confluence-updater-update 0.1.0
-Update a page
+confluence-updater 1.1.0
+Update a confluence pages
 
 USAGE:
     confluence-updater update [OPTIONS] --secret <secret> --user <user>
@@ -30,12 +32,9 @@ FLAGS:
     -V, --version    Prints version information
 
 OPTIONS:
-    -c, --config-path <config-path>    The path to the config file. [env: CU_CONFIG_PATH=]  [default: ./confluence-
-                                       config.yaml]
-        --fqdn <fqdn>                  The fully qualified domain name of your Atlassian Cloud. [env: CU_FQDN=]
-                                       [default: your-domain.atlassian.net]
-    -s, --secret <secret>              The token/secret to use. [https://id.atlassian.com/manage-profile/security/api-
-                                       tokens] [env:
-                                       CU_SECRET=ZndNxSlfTOAfuyEFv8Z61863]
+    -c, --config-path <config-path>    The path to the config file. [env: CU_CONFIG_PATH=]  [default: ./confluence-config.yaml]
+        --fqdn <fqdn>                  The fully qualified domain name of your Atlassian Cloud. [env:CU_FQDN=]  [default: your-domain.atlassian.net]
+    -l, --label <label>...             Add a label to all updating pages. Can be used multiple times.
+    -s, --secret <secret>              The token/secret to use. https://id.atlassian.com/manage-profile/security/api-tokens [env: CU_SECRET=]
     -u, --user <user>                  Confluence user to login with [env: CU_USER=]
 ```

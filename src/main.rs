@@ -13,7 +13,7 @@ use structopt::StructOpt;
     author = "Patrick Kerwood <patrick@kerwood.dk>"
 )]
 enum Opt {
-    #[structopt(about = "Update a page")]
+    #[structopt(about = "Update a confluence pages")]
     Update {
         #[structopt(short, long, env = "CU_USER", help = "Confluence user to login with")]
         user: String,
@@ -22,7 +22,7 @@ enum Opt {
             short,
             long,
             env = "CU_SECRET",
-            help = "The token/secret to use. [https://id.atlassian.com/manage-profile/security/api-tokens]"
+            help = "The token/secret to use. https://id.atlassian.com/manage-profile/security/api-tokens"
         )]
         secret: String,
 
@@ -43,7 +43,12 @@ enum Opt {
         )]
         config_path: String,
 
-        #[structopt(short, long = "label", help = "Add a label to all updating pages.")]
+        #[structopt(
+            name = "label",
+            short,
+            long = "label",
+            help = "Add a label to all updating pages. Can be used multiple times."
+        )]
         labels: Vec<String>,
     },
 }
