@@ -68,9 +68,6 @@ impl Confluence {
         let reader = BufReader::new(file);
         let config: Config = serde_yaml::from_reader(reader)?;
 
-        // for page in config.content.iter() {
-        //     page.labels.append(&mut self.global_labels)
-        // }
         Ok(config.content)
     }
 
