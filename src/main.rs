@@ -1,4 +1,9 @@
-use confluence_updater::*;
+// use confluence_updater::*;
+mod confluence;
+use confluence::Confluence;
+mod content_payload;
+mod error;
+mod page;
 use structopt::StructOpt;
 
 #[derive(Debug, StructOpt)]
@@ -41,7 +46,7 @@ enum Opt {
 }
 
 #[tokio::main]
-async fn main() {
+async fn main() -> Result<(), String> {
     match Opt::from_args() {
         Opt::Update {
             user,
@@ -50,7 +55,8 @@ async fn main() {
             config_path,
         } => {
             let con = Confluence::new(user, secret, fqdn, config_path);
-            con.update_pages().await.unwrap();
+            con.update_pages().await?;
         }
     }
+    Ok(())
 }

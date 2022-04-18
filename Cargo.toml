@@ -7,10 +7,6 @@ edition = "2018"
 name = "confluence-updater"
 path = "src/main.rs"
 
-[lib]
-name = "confluence_updater"
-path = "src/lib.rs"
-
 [dependencies]
 reqwest = { version = "0.11.6", features = ["json"] }
 tokio = { version = "1.13.0", features = ["full"] }
@@ -21,3 +17,5 @@ openssl = { version = "0.10.38", features = ["vendored"] }
 comrak = "0.12.1"
 futures = "0.3.17"
 serde_yaml = "0.8.21"
+sha2 = "0.10.2"
+hex = "0.4.3"
