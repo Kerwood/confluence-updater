@@ -38,3 +38,23 @@ OPTIONS:
     -s, --secret <secret>              The token/secret to use. https://id.atlassian.com/manage-profile/security/api-tokens [env: CU_SECRET=]
     -u, --user <user>                  Confluence user to login with [env: CU_USER=]
 ```
+
+## Example
+
+Either set the user, secret and FQDN with environment variables or as parameters.
+
+```
+export CU_USER=you-user@example.org
+export CU_SECRET=personal-access-token
+export CU_FQDN=your-domain.atlassian.net
+```
+
+Create the `confluence-config.yaml` like in the [example.](https://github.com/Kerwood/confluence-updater/blob/main/confluence-config.yaml)
+
+Run `confluence-updater`.
+
+```
+➜  ~ confluence-updater
+[ID:353237642][SHA:17998344] :: Skipped Kubernetes Install Guide - ./kubernetes-install.md
+[ID:353237651][SHA:58a0b222] :: Updated Grafana Install Guide [v.61] - ./grafana-install.md
+```
