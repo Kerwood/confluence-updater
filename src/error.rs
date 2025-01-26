@@ -1,50 +1,23 @@
-use reqwest::Error as ReqwestError;
-use serde_yaml::Error as SerdeYamlError;
-use std::error::Error;
-use std::fmt;
-use std::io::Error as IoError;
+#[derive(thiserror::Error, Debug)]
+#[allow(clippy::enum_variant_names)]
+pub enum Error {
+    #[error("ERROR: HTTP request, {0}")]
+    Reqwest(#[from] reqwest::Error),
 
-#[derive(Debug)]
-pub enum ConUpdaterError {
-    Io(IoError),
-    SerdeYaml(SerdeYamlError),
-    Reqwest(ReqwestError),
-    BadStatusCode(String),
+    #[error("ERROR: Could not read the config file. {0}")]
+    IO(#[from] std::io::Error),
+
+    #[error("ERROR: Cound not parse YAML in config file, {0}")]
+    SerdeYml(#[from] serde_yml::Error),
+
+    #[error("ERROR: Cound not parse FQDN to a valid url; {0}")]
+    UrlParse(#[from] url::ParseError),
+
+    #[error("ERROR: Cound not parse UTF-8 byte vector to String; {0}")]
+    FromUtf8(#[from] std::string::FromUtf8Error),
+
+    #[error("ERROR: No h1 header found in top of page. Add a header or use the overrideTitle configuration")]
+    PageHeaderMissing,
 }
 
-impl Error for ConUpdaterError {}
-
-impl fmt::Display for ConUpdaterError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            ConUpdaterError::Io(e) => write!(f, "{}", e.to_string()),
-            ConUpdaterError::SerdeYaml(e) => write!(f, "{}", e.to_string()),
-            ConUpdaterError::Reqwest(e) => write!(f, "{}", e.to_string()),
-            ConUpdaterError::BadStatusCode(e) => write!(f, "{}", e.to_string()),
-        }
-    }
-}
-
-impl From<std::io::Error> for ConUpdaterError {
-    fn from(error: std::io::Error) -> Self {
-        ConUpdaterError::Io(error)
-    }
-}
-
-impl From<serde_yaml::Error> for ConUpdaterError {
-    fn from(error: serde_yaml::Error) -> Self {
-        ConUpdaterError::SerdeYaml(error)
-    }
-}
-
-impl From<reqwest::Error> for ConUpdaterError {
-    fn from(error: reqwest::Error) -> Self {
-        ConUpdaterError::Reqwest(error)
-    }
-}
-
-impl From<ConUpdaterError> for String {
-    fn from(error: ConUpdaterError) -> Self {
-        error.to_string()
-    }
-}
+pub type Result<T, E = Error> = std::result::Result<T, E>;
