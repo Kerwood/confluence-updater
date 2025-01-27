@@ -14,7 +14,6 @@ pub struct Config {
     pub user: String,
     pub secret: String,
     pub fqdn: String,
-    pub config_path: String,
     pub pages: Vec<PageConfig>,
 }
 
@@ -157,7 +156,6 @@ impl TryFrom<CommandArgs> for Config {
             user: args.user,
             secret: args.secret,
             fqdn: args.fqdn,
-            config_path: args.config_path,
             pages: config.pages,
         };
 
