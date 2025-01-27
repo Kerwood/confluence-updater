@@ -1,0 +1,10 @@
+pages:
+  - filePath: ./path/to/markdown-1.md
+    pageId: 353468432
+    overrideTitle: Some Other Title
+    labels:
+      - ci/cd
+  - filePath: ./path/to/markdown-2.md
+    pageId: 353435649
+    labels:
+      - ci/cd
