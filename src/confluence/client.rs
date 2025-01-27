@@ -7,7 +7,6 @@ use url::Url;
 
 #[derive(Deserialize, Debug)]
 pub struct PageResponse {
-    pub id: String,
     pub version: Version,
     pub labels: Option<Labels>,
 }
