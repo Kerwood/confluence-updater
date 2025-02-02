@@ -40,15 +40,6 @@ Options:
 
 Author: Patrick Kerwood <patrick@kerwood.dk>
 ```
-### Code Blocks
-Confluence Updater renders markdown code blocks into a Confluence CodeBlock macro with syntax highlighting. Annotate the code block with a Confluence supported lanuge.
-````
-```rust
-let x = "hello-world"
-```
-````
-
-![code-examples](./images/code-examples.png)
 
 ### Example
 
@@ -69,6 +60,29 @@ Run `confluence-updater`.
 INFO page:update_confluence_page: confluence_updater::confluence::client: successfully updated page. id="728383651" title="Kubernetes Install Guide" path="./kubernetes-install.md" sha="6b8b051c"
 INFO page:update_confluence_page: confluence_updater::confluence::client: no changes to page, skipping. id="729133252" title="Grafana Install Guide [v.61]" path="./grafana-install.md" sha="fa3d0cdd"
 ```
+
+### Github Action
+A Github Action is available for running Confluce Updater in your Github workflow.
+
+```yaml
+- name: Confluence Updater
+  uses: kerwood/confluence-updater-action@v1
+  with:
+    fqdn: your-domain.atlassian.net
+    user: ${{ secrets.USER }}
+    api_token: ${{ secrets.API_TOKEN }}
+```
+See [kerwood/confluence-updater-action](https://github.com/Kerwood/confluence-updater-action) for more details.
+
+## Code Blocks
+Confluence Updater renders markdown code blocks into a Confluence CodeBlock macro with syntax highlighting. Annotate the code block with a Confluence supported lanuge.
+````
+```rust
+let x = "hello-world"
+```
+````
+
+![code-examples](./images/code-examples.png)
 
 ## Release Notes
 
