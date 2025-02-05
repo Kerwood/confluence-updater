@@ -9,6 +9,14 @@ use url::Url;
 pub struct PageResponse {
     pub version: Version,
     pub labels: Option<Labels>,
+    #[serde(rename = "_links")]
+    pub links: Links,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct Links {
+    base: String,
+    webui: String,
 }
 
 #[derive(Deserialize, Debug)]
@@ -87,6 +95,19 @@ impl ConfluenceClient {
         let version = response.version.number;
 
         Ok(version)
+    }
+
+    #[instrument(skip_all, ret(level = Level::TRACE), err(Debug, level = Level::DEBUG))]
+    pub async fn get_page_link(&self, page_id: &str) -> Result<String> {
+        let response = self
+            .get(format!("/wiki/api/v2/pages/{}", page_id).as_ref())
+            .await?
+            .json::<PageResponse>()
+            .await?;
+        let base = response.links.base;
+        let webui = response.links.webui;
+
+        Ok(format!("{}{}", base, webui))
     }
 
     #[instrument(skip_all, ret(level = Level::TRACE), err(Debug, level = Level::DEBUG))]
