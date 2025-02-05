@@ -30,7 +30,6 @@ struct CommandArgs {
 
     #[arg(
         long,
-        default_value = "your-domain.atlassian.net",
         env = "CU_FQDN",
         help = "The fully qualified domain name of your Atlassian Cloud."
     )]

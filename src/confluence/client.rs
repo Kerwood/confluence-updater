@@ -3,7 +3,6 @@ use crate::error::{Error, Result};
 use reqwest::{ClientBuilder, Response};
 use serde::Deserialize;
 use tracing::{debug, info, instrument, Level};
-use url::Url;
 
 #[derive(Deserialize, Debug)]
 pub struct PageResponse {
@@ -46,7 +45,7 @@ impl ConfluenceClient {
     #[instrument(skip_all, err(Debug, level = Level::DEBUG))]
     pub fn new<T: ConfluenceClientTrait>(config: &T) -> Result<Self> {
         let client = ClientBuilder::new().build()?;
-        let base_url = config.fqdn()?.to_string();
+        let base_url = config.fqdn().to_string();
 
         debug!(%base_url, "creating confluence client");
 
@@ -163,7 +162,7 @@ impl ConfluenceClient {
 }
 
 pub trait ConfluenceClientTrait {
-    fn fqdn(&self) -> Result<Url>;
+    fn fqdn(&self) -> String;
     fn username(&self) -> String;
     fn secret(&self) -> String;
 }

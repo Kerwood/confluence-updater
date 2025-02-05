@@ -13,14 +13,14 @@ pub enum Error {
     #[error("ERROR: Faild to parse string to interger; {0}")]
     ParseInt(#[from] std::num::ParseIntError),
 
-    #[error("ERROR: Cound not parse FQDN to a valid url; {0}")]
-    UrlParse(#[from] url::ParseError),
-
     #[error("ERROR: Cound not parse UTF-8 byte vector to String; {0}")]
     FromUtf8(#[from] std::string::FromUtf8Error),
 
     #[error("ERROR: No h1 header found in top of page. Add a header or use the overrideTitle configuration")]
     PageHeaderMissing,
+
+    #[error("ERROR: Protocol scheme (https://) missing from FQDN: [{0}]")]
+    ProtocolSchemeMissing(String),
 
     #[error(
         "ERROR: A confluence page ID annotation was found on a link, but could not be parsed [{0}]"
