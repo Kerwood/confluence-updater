@@ -95,6 +95,12 @@ let x = "hello-world"
 
 ## Release Notes
 
+### 2.1.0
+- Added support for link replacement. See [Link Replacement](#link-replacement)
+- Removed `url` crate as a depdency.
+- Protocol schema is not mandatory on FQDN, `https://`.
+- Fixed https://github.com/Kerwood/confluence-updater/issues/3, issue with indentation on codeblock.
+
 ### 2.0.0 - Breaking changes 
 - If a Markdown file contains a `h1` header at the top, it will be extracted and used as the page title.
 - To override the `h1` header from the Markdown file, you can specify an `overrideTitle` property in the page configuration.
