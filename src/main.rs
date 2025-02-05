@@ -5,6 +5,7 @@ mod markdown;
 use clap::{Parser, ValueEnum};
 use config::Config;
 use confluence::{ConfluenceClient, UpdatePageTrait};
+use std::sync::OnceLock;
 use tracing::{error, span, Level};
 
 #[derive(Parser, Debug)]
@@ -77,9 +78,17 @@ impl From<LogLevel> for Level {
     }
 }
 
+static FQDN: OnceLock<String> = OnceLock::new();
+static USER: OnceLock<String> = OnceLock::new();
+static SECRET: OnceLock<String> = OnceLock::new();
+
 #[tokio::main]
 async fn main() {
     let args = CommandArgs::parse();
+
+    FQDN.set(args.fqdn.to_owned()).unwrap();
+    USER.set(args.user.to_owned()).unwrap();
+    SECRET.set(args.secret.to_owned()).unwrap();
 
     let log_level: Level = args.log_level.into();
     tracing_subscriber::fmt()
