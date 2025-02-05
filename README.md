@@ -9,7 +9,7 @@ Confluence Updater will render your markdown files to HTML and upload it to a sp
 You can create a build pipeline that uploads your Git documentation to Confluence Cloud. Here's a how-to on my blog [https://linuxblog.xyz/posts/confluence-updater/](https://linuxblog.xyz/posts/confluence-updater/).
 
 ## Authentication
-The tool currently only supports persnoal access tokens. 
+Confluence Cloud only supports personal access tokens. 
 Go to [https://id.atlassian.com/manage-profile/security/api-tokens](https://id.atlassian.com/manage-profile/security/api-tokens) and create an API token.
 
 ## Usage
@@ -40,6 +40,15 @@ Options:
 
 Author: Patrick Kerwood <patrick@kerwood.dk>
 ```
+### Code Blocks
+Confluence Updater renders markdown code blocks into a Confluence CodeBlock macro with syntax highlighting. Annotate the code block with a Confluence supported lanuge.
+````
+```rust
+let x = "hello-world"
+```
+````
+
+![code-examples](./images/code-examples.png)
 
 ### Example
 

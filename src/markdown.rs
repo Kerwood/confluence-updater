@@ -1,5 +1,53 @@
+use crate::confluence::{ConfluenceClient, ConfluenceClientTrait};
 use crate::error::{Error, Result};
-use comrak::{self, format_html, nodes::NodeValue, parse_document, Arena, Options};
+use crate::{FQDN, SECRET, USER};
+use tokio::task;
+
+use comrak::{
+    self, format_html,
+    nodes::{NodeCodeBlock, NodeLink, NodeValue},
+    parse_document, Arena, Options,
+};
+use tracing::warn;
+
+#[derive(Debug)]
+struct PageLink {
+    id: u64,
+}
+
+struct Client {}
+
+impl ConfluenceClientTrait for Client {
+    fn fqdn(&self) -> String {
+        FQDN.get().unwrap().to_string()
+    }
+
+    fn username(&self) -> String {
+        USER.get().unwrap().to_string()
+    }
+
+    fn secret(&self) -> String {
+        SECRET.get().unwrap().to_string()
+    }
+}
+
+impl PageLink {
+    fn try_option_into(input: &str) -> Option<Self> {
+        let parts: Vec<&str> = input.split(":").collect();
+        if parts.len() != 2 || parts[0] != "pid" {
+            return None;
+        }
+
+        match parts[1].trim().parse::<u64>() {
+            Ok(id) => Some(PageLink { id }),
+            Err(_) => {
+                let error = Error::LinkIdMissing(input.to_string());
+                warn!(%error);
+                None
+            }
+        }
+    }
+}
 
 pub fn render_markdown_file(file_path: &str) -> Result<String> {
     let arena = Arena::new();
@@ -16,29 +64,18 @@ pub fn render_markdown_file(file_path: &str) -> Result<String> {
         }
     }
 
-    // Replacing codeblock nodes with a raw output nodes incapsulating the code value with
-    // HTML that creates a CodeBlock macro in Confluence.
     for node in root.descendants() {
         let mut node_value = node.data.borrow_mut();
 
+        // Replacing the url value of a NodeLink with the Confluence page url if the link title matches "pid:<id>"
+        if let NodeValue::Link(ref mut node_link) = node_value.value {
+            replace_node_link(node_link)?;
+        }
+
+        // Replacing codeblock nodes with a raw output nodes incapsulating the code value with
+        // HTML that creates a CodeBlock macro in Confluence.
         if let NodeValue::CodeBlock(codeblock) = &node_value.value {
-            let language = match codeblock.info.is_empty() {
-                true => "plaintext",
-                false => &codeblock.info,
-            };
-
-            let raw_html_node = format!(
-                r#"
-                    <ac:structured-macro ac:name="code" ac:schema-version="1">
-                    <ac:parameter ac:name="language">{}</ac:parameter>
-                    <ac:plain-text-body><![CDATA[{}]]></ac:plain-text-body>
-                    </ac:structured-macro>
-                "#,
-                language,
-                codeblock.literal.trim()
-            );
-
-            node_value.value = NodeValue::Raw(raw_html_node);
+            node_value.value = replace_with_codeblock_macro(codeblock);
         };
     }
 
@@ -47,6 +84,38 @@ pub fn render_markdown_file(file_path: &str) -> Result<String> {
     let html = String::from_utf8(html_bytes)?;
 
     Ok(html)
+}
+
+fn replace_node_link(node_link: &mut NodeLink) -> Result<()> {
+    if let Some(page_link) = PageLink::try_option_into(&node_link.title) {
+        let client = ConfluenceClient::new(&Client {})?;
+        let id = page_link.id.to_string();
+        let page_link_res = task::block_in_place(|| {
+            tokio::runtime::Handle::current().block_on(client.get_page_link(&id))
+        })?;
+        node_link.url = page_link_res;
+    }
+    Ok(())
+}
+
+fn replace_with_codeblock_macro(codeblock: &NodeCodeBlock) -> NodeValue {
+    let language = match codeblock.info.is_empty() {
+        true => "plaintext",
+        false => &codeblock.info,
+    };
+
+    let raw_html_node = format!(
+        r#"
+                    <ac:structured-macro ac:name="code" ac:schema-version="1">
+                    <ac:parameter ac:name="language">{}</ac:parameter>
+                    <ac:plain-text-body><![CDATA[{}]]></ac:plain-text-body>
+                    </ac:structured-macro>
+                "#,
+        language,
+        codeblock.literal.trim()
+    );
+
+    NodeValue::Raw(raw_html_node)
 }
 
 pub fn get_page_title(file_path: &str) -> Result<String> {
