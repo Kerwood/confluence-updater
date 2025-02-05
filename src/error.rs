@@ -10,6 +10,9 @@ pub enum Error {
     #[error("ERROR: Cound not parse YAML in config file, {0}")]
     SerdeYml(#[from] serde_yml::Error),
 
+    #[error("ERROR: Faild to parse string to interger; {0}")]
+    ParseInt(#[from] std::num::ParseIntError),
+
     #[error("ERROR: Cound not parse FQDN to a valid url; {0}")]
     UrlParse(#[from] url::ParseError),
 
@@ -18,6 +21,11 @@ pub enum Error {
 
     #[error("ERROR: No h1 header found in top of page. Add a header or use the overrideTitle configuration")]
     PageHeaderMissing,
+
+    #[error(
+        "ERROR: A confluence page ID annotation was found on a link, but could not be parsed [{0}]"
+    )]
+    LinkIdMissing(String),
 }
 
 pub type Result<T, E = Error> = std::result::Result<T, E>;
