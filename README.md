@@ -18,7 +18,7 @@ The tool searches for a `confluence-updater.yaml` file in the current directory,
 Run below example command to start the process.
 
 ```
-confluence-updater -u your-user@example.org -s <api-token> --fqdn your-domain.atlassian.net
+confluence-updater -u your-user@example.org -s <api-token> --fqdn https://your-domain.atlassian.net
 ```
 
 You can use environment variables instead of parameters.
@@ -31,7 +31,7 @@ Usage: confluence-updater [OPTIONS] --user <USER> --secret <SECRET>
 Options:
   -u, --user <USER>                Confluence user to login with [env: CU_USER=]
   -s, --secret <SECRET>            The token/secret to use. https://id.atlassian.com/manage-profile/security/api-tokens [env: CU_SECRET=]
-      --fqdn <FQDN>                The fully qualified domain name of your Atlassian Cloud. [env: CU_FQDN=] [default: your-domain.atlassian.net]
+      --fqdn <FQDN>                The fully qualified domain name of your Atlassian Cloud. [env: CU_FQDN=]
   -c, --config-path <CONFIG_PATH>  The path to the config file. [env: CU_CONFIG_PATH=] [default: ./confluence-updater.yaml]
   -l, --label <label>              Add a label to all updating pages. Can be used multiple times.
       --log-level <LOG_LEVEL>      Log Level. [env: LOG_LEVEL=] [default: info] [possible values: trace, debug, info, warn, error]
@@ -48,7 +48,7 @@ Either set the user, secret and FQDN with environment variables or as parameters
 ```
 export CU_USER=you-user@example.org
 export CU_SECRET=personal-access-token
-export CU_FQDN=your-domain.atlassian.net
+export CU_FQDN=https://your-domain.atlassian.net
 ```
 
 Create the `confluence-updater.yaml` like in the [example.](https://github.com/Kerwood/confluence-updater/blob/main/confluence-updater.yaml)

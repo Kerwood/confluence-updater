@@ -7,7 +7,6 @@ use sha2::{Digest, Sha256};
 use std::cell::RefCell;
 use std::fs;
 use tracing::{debug, error, instrument, Level};
-use url::Url;
 
 #[derive(Debug)]
 pub struct Config {
@@ -123,12 +122,8 @@ impl UpdatePageTrait for PageConfig {
 }
 
 impl ConfluenceClientTrait for Config {
-    fn fqdn(&self) -> Result<url::Url> {
-        let mut fqdn = self.fqdn.to_owned();
-        if !(fqdn.starts_with("https://") || fqdn.starts_with("http://")) {
-            fqdn = format!("https://{}", fqdn);
-        }
-        Url::parse(fqdn.as_ref()).map_err(Error::from)
+    fn fqdn(&self) -> String {
+        self.fqdn.to_owned()
     }
 
     fn username(&self) -> String {
@@ -147,6 +142,10 @@ impl TryFrom<CommandArgs> for Config {
     fn try_from(args: CommandArgs) -> Result<Self, Self::Error> {
         let config_file = fs::read_to_string(&args.config_path)?;
         let mut config: PageConfigRoot = serde_yml::from_str(&config_file)?;
+
+        if !(args.fqdn.starts_with("https://")) {
+            return Err(Error::ProtocolSchemeMissing(args.fqdn));
+        }
 
         for page in config.pages.iter_mut() {
             page.labels.extend(args.labels.to_owned());
