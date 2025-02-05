@@ -112,7 +112,7 @@ fn replace_with_codeblock_macro(codeblock: &NodeCodeBlock) -> NodeValue {
                     </ac:structured-macro>
                 "#,
         language,
-        codeblock.literal.trim()
+        codeblock.literal.trim_end()
     );
 
     NodeValue::Raw(raw_html_node)
