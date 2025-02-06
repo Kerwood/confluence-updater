@@ -70,7 +70,7 @@ let x = "hello-world"
 ```
 ````
 
-![code-examples](./images/code-examples.png)
+![code-example](./images/code-example.png)
 
 ### Example
 
