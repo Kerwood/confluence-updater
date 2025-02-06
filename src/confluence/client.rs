@@ -1,3 +1,4 @@
+use super::restriction::Restriction;
 use super::ConfluencePage;
 use crate::error::{Error, Result};
 use reqwest::{ClientBuilder, Response};
@@ -31,6 +32,12 @@ pub struct Labels {
 #[derive(Deserialize, Debug)]
 pub struct LabelResult {
     pub name: String,
+}
+
+#[derive(Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct CurrentUser {
+    pub account_id: String,
 }
 
 #[derive(Debug)]
@@ -110,6 +117,17 @@ impl ConfluenceClient {
     }
 
     #[instrument(skip_all, ret(level = Level::TRACE), err(Debug, level = Level::DEBUG))]
+    pub async fn get_current_user(&self) -> Result<String> {
+        let response = self
+            .get("/wiki/rest/api/user/current")
+            .await?
+            .json::<CurrentUser>()
+            .await?;
+
+        Ok(response.account_id)
+    }
+
+    #[instrument(skip_all, ret(level = Level::TRACE), err(Debug, level = Level::DEBUG))]
     async fn get_page_sha(&self, page_id: &str) -> Result<Option<String>> {
         let path = format!("/wiki/api/v2/pages/{}?include-labels=true", page_id);
         let response = self.get(&path).await?.json::<PageResponse>().await?;
@@ -128,6 +146,13 @@ impl ConfluenceClient {
             true => Ok(None),
             false => Ok(Some(sha_label)),
         }
+    }
+
+    async fn set_page_read_only(&self, page_id: &str, account_id: &str) -> Result<()> {
+        let body = Restriction::new(account_id);
+        let path = format!("/wiki/rest/api/content/{}/restriction", page_id);
+        self.put(&path, &body).await?;
+        Ok(())
     }
 
     #[instrument(skip_all, ret(level = Level::TRACE), err(Debug, level = Level::DEBUG))]
@@ -157,6 +182,12 @@ impl ConfluenceClient {
 
         info!("successfully updated page.");
 
+        if page.read_only() {
+            let account_id = self.get_current_user().await?;
+            self.set_page_read_only(&page_id, &account_id).await?;
+            debug!("set 'view only' for anyone else than current user");
+        }
+
         Ok(Some(response))
     }
 }
@@ -173,4 +204,5 @@ pub trait UpdatePageTrait {
     fn labels(&self) -> Vec<String>;
     fn html_content(&self) -> String;
     fn sha(&self) -> String;
+    fn read_only(&self) -> bool;
 }

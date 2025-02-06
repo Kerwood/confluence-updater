@@ -40,6 +40,28 @@ Options:
 
 Author: Patrick Kerwood <patrick@kerwood.dk>
 ```
+### Link Replacement
+Confluence Updater supports replacing relative filesystem links to Markdown files, with links to the corresponding Confluence page, using the page ID of the linked page.
+
+Use the Markdown `title` feature to reference another page with `pid:<page-id>`.
+```md
+[Some link text](./other/file.md "pid:5234523")
+```
+
+### Read Only
+Set the `readOnly` property at either the root or page level to restrict others from editing. The owner of the personal access token will still have editing permissions.
+If defined at both levels, the page-level setting takes precedence.
+
+```yaml
+readOnly: true
+pages:
+  - filePath: ./README.md
+    pageId: 228184928
+    readOnly: false
+```
+
+![restrictions](./images/restrictions.png)
+
 ### Code Blocks
 Confluence Updater renders markdown code blocks into a Confluence CodeBlock macro with syntax highlighting. Annotate the code block with a Confluence supported lanuge.
 ````
@@ -96,6 +118,7 @@ let x = "hello-world"
 ## Release Notes
 
 ### 2.1.0
+- Added support for page restriction. See [Read Only](#read-only)
 - Added support for link replacement. See [Link Replacement](#link-replacement)
 - Removed `url` crate as a depdency.
 - Protocol schema is not mandatory on FQDN, `https://`.

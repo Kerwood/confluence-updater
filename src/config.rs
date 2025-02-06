@@ -17,8 +17,11 @@ pub struct Config {
 }
 
 #[derive(Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+// TODO: Rename to ConfigFile
 pub struct PageConfigRoot {
     pub pages: Vec<PageConfig>,
+    pub read_only: Option<bool>,
 }
 
 #[derive(Deserialize, Debug)]
@@ -34,6 +37,7 @@ pub struct PageConfig {
     title: RefCell<Option<String>>,
     #[serde(skip)]
     page_sha: RefCell<Option<String>>,
+    read_only: Option<bool>,
 }
 
 impl PageConfig {
@@ -110,6 +114,7 @@ impl UpdatePageTrait for PageConfig {
         };
 
         content.push_str(&self.title());
+        content.push_str(&self.read_only().to_string());
 
         let mut hasher = Sha256::new();
         hasher.update(content);
@@ -118,6 +123,10 @@ impl UpdatePageTrait for PageConfig {
         let sha = hex::encode(&hash[0..4]);
         *self.page_sha.borrow_mut() = Some(sha.to_string());
         sha
+    }
+
+    fn read_only(&self) -> bool {
+        self.read_only.unwrap_or(false)
     }
 }
 
@@ -149,6 +158,10 @@ impl TryFrom<CommandArgs> for Config {
 
         for page in config.pages.iter_mut() {
             page.labels.extend(args.labels.to_owned());
+
+            if config.read_only.is_some() && page.read_only.is_none() {
+                page.read_only = config.read_only;
+            }
         }
 
         let config = Self {
