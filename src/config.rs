@@ -18,8 +18,7 @@ pub struct Config {
 
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
-// TODO: Rename to ConfigFile
-pub struct PageConfigRoot {
+pub struct ConfigFile {
     pub pages: Vec<PageConfig>,
     pub read_only: Option<bool>,
 }
@@ -150,7 +149,7 @@ impl TryFrom<CommandArgs> for Config {
     #[instrument(skip_all, ret(level = Level::TRACE), err(Debug, level = Level::DEBUG))]
     fn try_from(args: CommandArgs) -> Result<Self, Self::Error> {
         let config_file = fs::read_to_string(&args.config_path)?;
-        let mut config: PageConfigRoot = serde_yml::from_str(&config_file)?;
+        let mut config: ConfigFile = serde_yml::from_str(&config_file)?;
 
         if !(args.fqdn.starts_with("https://")) {
             return Err(Error::ProtocolSchemeMissing(args.fqdn));
