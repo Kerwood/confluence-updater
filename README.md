@@ -141,6 +141,7 @@ let x = "hello-world"
 - Added support for page restriction. See [Read Only](#read-only)
 - Added support for link replacement. See [Link Replacement](#link-replacement)
 - Added support for a PAT label being added with the local part of the user email. See [Authentication](#authentication)
+- Renamed `sha` label to `page-sha`.
 - Removed `url` crate as a depdency.
 - Protocol schema is not mandatory on FQDN, `https://`.
 - Fixed https://github.com/Kerwood/confluence-updater/issues/3, issue with indentation on codeblock.
