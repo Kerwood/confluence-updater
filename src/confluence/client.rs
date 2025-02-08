@@ -137,8 +137,8 @@ impl ConfluenceClient {
             Some(labels) => labels
                 .results
                 .iter()
-                .filter(|x| x.name.starts_with("sha:"))
-                .map(|x| x.name.split("sha:").collect::<String>())
+                .filter(|x| x.name.starts_with("page-sha:"))
+                .map(|x| x.name.split("page-sha:").collect::<String>())
                 .collect(),
             None => String::new(),
         };
@@ -181,7 +181,7 @@ impl ConfluenceClient {
             .to_string();
 
         let mut labels = page.labels().clone();
-        labels.push(format!("sha:{}", page.sha()));
+        labels.push(format!("page-sha:{}", page.sha()));
         labels.push(format!("pa-token:{}", user_label));
 
         let confluence_page =
