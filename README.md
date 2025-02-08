@@ -12,6 +12,11 @@ You can create a build pipeline that uploads your Git documentation to Confluenc
 Confluence Cloud only supports personal access tokens. 
 Go to [https://id.atlassian.com/manage-profile/security/api-tokens](https://id.atlassian.com/manage-profile/security/api-tokens) and create an API token.
 
+Confluence Updater will add a label to all pages with the local part of the personal access token user email address. For example, a token with the email of `patrick@kerwood.dk` will get the label `pa-token:patrick` applied.
+This makes it easy to locate all Confluence pages where a user's personal access token is being used if the user becomes invalid for any reason.
+
+Additionally, by setting the `superscriptHeader` property in the configuration with a link to the repository, you can quickly find and replace the personal access token for that specific user, by searching for that specific label.
+
 ## Usage
 The tool searches for a `confluence-updater.yaml` file in the current directory, which contains the configuration for which markdown files to render and the page ID to update with the content. An example configuration file is available in the repository. **Note:** You need to create the page manually in Confluence Cloud first and obtain its page ID to include in the configuration file.
 
@@ -78,7 +83,7 @@ pages:
 ![superscriptheader](./images/superscriptheader.png)
 
 ### Code Blocks
-Confluence Updater renders markdown code blocks into a Confluence CodeBlock macro with syntax highlighting. Annotate the code block with a Confluence supported lanuge.
+Confluence Updater renders markdown code blocks into a Confluence CodeBlock macro with syntax highlighting. Annotate the code block with a Confluence supported language.
 ````
 ```rust
 let x = "hello-world"
@@ -135,6 +140,7 @@ let x = "hello-world"
 ### 2.1.0
 - Added support for page restriction. See [Read Only](#read-only)
 - Added support for link replacement. See [Link Replacement](#link-replacement)
+- Added support for a PAT label being added with the local part of the user email. See [Authentication](#authentication)
 - Removed `url` crate as a depdency.
 - Protocol schema is not mandatory on FQDN, `https://`.
 - Fixed https://github.com/Kerwood/confluence-updater/issues/3, issue with indentation on codeblock.

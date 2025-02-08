@@ -36,8 +36,9 @@ pub struct LabelResult {
 
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
-pub struct CurrentUser {
+pub struct User {
     pub account_id: String,
+    pub email: String,
 }
 
 #[derive(Debug)]
@@ -117,14 +118,14 @@ impl ConfluenceClient {
     }
 
     #[instrument(skip_all, ret(level = Level::TRACE), err(Debug, level = Level::DEBUG))]
-    pub async fn get_current_user(&self) -> Result<String> {
+    pub async fn get_current_user(&self) -> Result<User> {
         let response = self
             .get("/wiki/rest/api/user/current")
             .await?
-            .json::<CurrentUser>()
+            .json::<User>()
             .await?;
 
-        Ok(response.account_id)
+        Ok(response)
     }
 
     #[instrument(skip_all, ret(level = Level::TRACE), err(Debug, level = Level::DEBUG))]
@@ -170,8 +171,18 @@ impl ConfluenceClient {
             }
         }
 
+        let user_label = self
+            .get_current_user()
+            .await?
+            .email
+            .split_once("@")
+            .ok_or(Error::CurrentUserEmailMissing)?
+            .0
+            .to_string();
+
         let mut labels = page.labels().clone();
         labels.push(format!("sha:{}", page.sha()));
+        labels.push(format!("pa-token:{}", user_label));
 
         let confluence_page =
             ConfluencePage::new(&page.title(), version, &labels, &page.html_content());
@@ -183,7 +194,7 @@ impl ConfluenceClient {
         info!("successfully updated page.");
 
         if page.read_only() {
-            let account_id = self.get_current_user().await?;
+            let account_id = self.get_current_user().await?.account_id;
             self.set_page_read_only(&page_id, &account_id).await?;
             debug!("set 'view only' for anyone else than current user");
         }
