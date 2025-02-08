@@ -50,6 +50,7 @@ Use the Markdown `title` feature to reference another page with `pid:<page-id>`.
 
 ### Read Only
 Set the `readOnly` property at either the root or page level to restrict others from editing. The owner of the personal access token will still have editing permissions.
+
 If defined at both levels, the page-level setting takes precedence.
 
 ```yaml
@@ -61,6 +62,20 @@ pages:
 ```
 
 ![restrictions](./images/restrictions.png)
+
+
+### Superscript Header
+Set the `superscriptHeader` property at either the root or page level to add a small header in superscript on top of each page. The property string supports markdown.
+
+If defined at both levels, the page-level setting takes precedence.
+
+```yaml
+superscriptHeader: This page is sourced from [kerwood/confluence-updater](https://github.com/Kerwood/confluence-updater)
+pages:
+  - filePath: ./README.md
+    pageId: 228184928
+```
+![superscriptheader](./images/superscriptheader.png)
 
 ### Code Blocks
 Confluence Updater renders markdown code blocks into a Confluence CodeBlock macro with syntax highlighting. Annotate the code block with a Confluence supported lanuge.
