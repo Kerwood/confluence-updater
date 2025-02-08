@@ -49,11 +49,15 @@ impl PageLink {
     }
 }
 
-pub fn render_markdown_file(file_path: &str) -> Result<String> {
+pub fn render_markdown_file(file_path: &str, super_string: Option<&String>) -> Result<String> {
     let arena = Arena::new();
 
     let md_file = std::fs::read_to_string(file_path)?;
-    let root = parse_document(&arena, &md_file, &Options::default());
+
+    let mut options = Options::default();
+    options.extension.superscript = true;
+
+    let root = parse_document(&arena, &md_file, &options);
 
     // Remove the first child node if it's a header level 1.
     if let Some(node) = root.first_child() {
@@ -62,6 +66,12 @@ pub fn render_markdown_file(file_path: &str) -> Result<String> {
                 node.detach();
             }
         }
+    }
+
+    if let Some(sup) = super_string {
+        let super_string = format!("^{}^", sup);
+        let super_node = parse_document(&arena, &super_string, &options);
+        root.prepend(super_node);
     }
 
     for node in root.descendants() {
@@ -78,7 +88,6 @@ pub fn render_markdown_file(file_path: &str) -> Result<String> {
             node_value.value = replace_with_codeblock_macro(codeblock);
         };
     }
-
     let mut html_bytes = vec![];
     format_html(root, &Options::default(), &mut html_bytes)?;
     let html = String::from_utf8(html_bytes)?;

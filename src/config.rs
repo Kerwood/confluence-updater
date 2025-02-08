@@ -19,8 +19,9 @@ pub struct Config {
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct ConfigFile {
-    pub pages: Vec<PageConfig>,
-    pub read_only: Option<bool>,
+    pages: Vec<PageConfig>,
+    read_only: Option<bool>,
+    superscript_header: Option<String>,
 }
 
 #[derive(Deserialize, Debug)]
@@ -37,6 +38,7 @@ pub struct PageConfig {
     #[serde(skip)]
     page_sha: RefCell<Option<String>>,
     read_only: Option<bool>,
+    superscript_header: Option<String>,
 }
 
 impl PageConfig {
@@ -86,7 +88,7 @@ impl UpdatePageTrait for PageConfig {
             return html.to_string();
         }
 
-        match markdown::render_markdown_file(&self.file_path) {
+        match markdown::render_markdown_file(&self.file_path, self.superscript_header.as_ref()) {
             Ok(html) => {
                 *self.html.borrow_mut() = Some(html.to_string());
                 html
@@ -114,6 +116,7 @@ impl UpdatePageTrait for PageConfig {
 
         content.push_str(&self.title());
         content.push_str(&self.read_only().to_string());
+        content.push_str(self.superscript_header.as_ref().unwrap_or(&"".to_string()));
 
         let mut hasher = Sha256::new();
         hasher.update(content);
@@ -160,6 +163,10 @@ impl TryFrom<CommandArgs> for Config {
 
             if config.read_only.is_some() && page.read_only.is_none() {
                 page.read_only = config.read_only;
+            }
+
+            if config.superscript_header.is_some() && page.superscript_header.is_none() {
+                page.superscript_header = config.superscript_header.clone();
             }
         }
 
