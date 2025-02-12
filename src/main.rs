@@ -2,6 +2,7 @@ mod config;
 mod confluence;
 mod error;
 mod markdown;
+mod render_markdown;
 use clap::{Parser, ValueEnum};
 use config::Config;
 use confluence::{ConfluenceClient, UpdatePageTrait};
