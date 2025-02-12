@@ -68,6 +68,9 @@ pages:
 
 ![restrictions](./images/restrictions.png)
 
+### Image uploads
+Image links in markdown will get uploaded as attachments and embedded into the Confluence page.
+
 
 ### Superscript Header
 Set the `superscriptHeader` property at either the root or page level to add a small header in superscript on top of each page. The property string supports markdown.
@@ -110,6 +113,19 @@ Run `confluence-updater`.
 ➜  ~ confluence-updater
 INFO page:update_confluence_page: confluence_updater::confluence::client: successfully updated page. id="728383651" title="Kubernetes Install Guide" path="./kubernetes-install.md" sha="6b8b051c"
 INFO page:update_confluence_page: confluence_updater::confluence::client: no changes to page, skipping. id="729133252" title="Grafana Install Guide [v.61]" path="./grafana-install.md" sha="fa3d0cdd"
+```
+
+## Github Action
+
+A supported Github Action is available here: [https://github.com/Kerwood/confluence-updater-action](https://github.com/Kerwood/confluence-updater-action). 
+
+```yaml
+- name: Confluence Updater
+  uses: kerwood/confluence-updater-action@v1
+  with:
+    fqdn: your-domain.atlassian.net
+    user: ${{ secrets.USER }}
+    api_token: ${{ secrets.API_TOKEN }}
 ```
 
 ## Release Notes

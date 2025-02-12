@@ -1,7 +1,11 @@
 use super::restriction::Restriction;
 use super::ConfluencePage;
 use crate::error::{Error, Result};
-use reqwest::{ClientBuilder, Response};
+use reqwest::{
+    header::{HeaderMap, HeaderValue},
+    multipart::Form,
+    ClientBuilder, Response,
+};
 use serde::Deserialize;
 use tracing::{debug, info, instrument, Level};
 
@@ -69,7 +73,7 @@ impl ConfluenceClient {
     fn request(&self, method: reqwest::Method, path: &str) -> reqwest::RequestBuilder {
         debug!("created request");
         self.client
-            .request(method, format!("{}/{}", self.base_url, path))
+            .request(method, format!("{}{}", self.base_url, path))
             .basic_auth(self.user.to_string(), Some(self.secret.to_string()))
     }
 
@@ -92,6 +96,21 @@ impl ConfluenceClient {
             .map_err(Error::from)
     }
 
+    #[instrument(skip_all, ret(level = Level::TRACE), err(Debug, level = Level::DEBUG))]
+    async fn put_multiform(
+        &self,
+        path: &str,
+        header_map: Option<HeaderMap<HeaderValue>>,
+        form: Form,
+    ) -> Result<Response> {
+        let mut req = self.request(reqwest::Method::PUT, path).multipart(form);
+
+        if let Some(headers) = header_map {
+            req = req.headers(headers);
+        }
+
+        req.send().await?.error_for_status().map_err(Error::from)
+    }
     #[instrument(skip_all, ret(level = Level::TRACE), err(Debug, level = Level::DEBUG))]
     async fn get_page_version(&self, page_id: &str) -> Result<u64> {
         let response = self
@@ -126,6 +145,23 @@ impl ConfluenceClient {
             .await?;
 
         Ok(response)
+    }
+
+    #[instrument(skip_all, ret(level = Level::TRACE), err(Debug, level = Level::DEBUG))]
+    pub async fn upload_attachment(&self, page_id: &str, file_path: &str) -> Result<()> {
+        let path = format!("/wiki/rest/api/content/{}/child/attachment", page_id);
+
+        let mut header_map = HeaderMap::new();
+        header_map.insert("X-Atlassian-Token", HeaderValue::from_static("nocheck"));
+
+        let form = Form::new()
+            .text("minorEdit", "true")
+            .file("file", file_path)
+            .await?;
+
+        self.put_multiform(&path, Some(header_map), form).await?;
+
+        Ok(())
     }
 
     #[instrument(skip_all, ret(level = Level::TRACE), err(Debug, level = Level::DEBUG))]

@@ -25,6 +25,9 @@ pub enum Error {
     #[error("ERROR: Failed to get the local part of the current user email.")]
     CurrentUserEmailMissing,
 
+    #[error("ERROR: The link/path for image is missing")]
+    ImageLinkMissing,
+
     #[error(
         "ERROR: A confluence page ID annotation was found on a link, but could not be parsed [{0}]"
     )]

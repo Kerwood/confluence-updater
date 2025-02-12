@@ -88,7 +88,11 @@ impl UpdatePageTrait for PageConfig {
             return html.to_string();
         }
 
-        match markdown::render_markdown_file(&self.file_path, self.superscript_header.as_ref()) {
+        match markdown::render_markdown_file(
+            &self.page_id,
+            &self.file_path,
+            self.superscript_header.as_ref(),
+        ) {
             Ok(html) => {
                 *self.html.borrow_mut() = Some(html.to_string());
                 html

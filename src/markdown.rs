@@ -1,18 +1,46 @@
+use core::fmt;
+use std::cell::RefCell;
+use std::path::Path;
+
 use crate::confluence::{ConfluenceClient, ConfluenceClientTrait};
 use crate::error::{Error, Result};
 use crate::{FQDN, SECRET, USER};
-use tokio::task;
-
 use comrak::{
     self, format_html,
     nodes::{NodeCodeBlock, NodeLink, NodeValue},
     parse_document, Arena, Options,
 };
-use tracing::warn;
+use comrak::{arena_tree::Node, nodes::Ast};
+use normalize_path::NormalizePath;
+use tokio::task;
+use tracing::{info, warn};
 
-#[derive(Debug)]
-struct PageLink {
-    id: u64,
+enum Align {
+    Left,
+    Right,
+    Center,
+}
+
+impl Align {
+    fn from_str(value: &str) -> Option<Align> {
+        match value {
+            "align-left" => Some(Align::Left),
+            "align-right" => Some(Align::Right),
+            "align-center" => Some(Align::Center),
+            _ => None,
+        }
+    }
+}
+
+impl fmt::Display for Align {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let align = match self {
+            Align::Left => "left",
+            Align::Right => "right",
+            Align::Center => "center",
+        };
+        write!(f, "{}", align)
+    }
 }
 
 struct Client {}
@@ -29,6 +57,11 @@ impl ConfluenceClientTrait for Client {
     fn secret(&self) -> String {
         SECRET.get().unwrap().to_string()
     }
+}
+
+#[derive(Debug)]
+struct PageLink {
+    id: u64,
 }
 
 impl PageLink {
@@ -49,7 +82,11 @@ impl PageLink {
     }
 }
 
-pub fn render_markdown_file(file_path: &str, super_string: Option<&String>) -> Result<String> {
+pub fn render_markdown_file(
+    page_id: &str,
+    file_path: &str,
+    super_string: Option<&String>,
+) -> Result<String> {
     let arena = Arena::new();
 
     let md_file = std::fs::read_to_string(file_path)?;
@@ -74,6 +111,13 @@ pub fn render_markdown_file(file_path: &str, super_string: Option<&String>) -> R
         root.prepend(super_node);
     }
 
+    let image_nodes: Vec<_> = root
+        .descendants()
+        .filter(|node| matches!(node.data.borrow().value, NodeValue::Image(_)))
+        .collect();
+
+    process_image_nodes(page_id, file_path, image_nodes)?;
+
     for node in root.descendants() {
         let mut node_value = node.data.borrow_mut();
 
@@ -88,6 +132,7 @@ pub fn render_markdown_file(file_path: &str, super_string: Option<&String>) -> R
             node_value.value = replace_with_codeblock_macro(codeblock);
         };
     }
+
     let mut html_bytes = vec![];
     format_html(root, &Options::default(), &mut html_bytes)?;
     let html = String::from_utf8(html_bytes)?;
@@ -107,6 +152,106 @@ fn replace_node_link(node_link: &mut NodeLink) -> Result<()> {
     Ok(())
 }
 
+fn process_image_nodes<'a>(
+    page_id: &str,
+    file_path: &str,
+    image_nodes: Vec<&'a Node<'a, RefCell<Ast>>>,
+) -> Result<()> {
+    for node in image_nodes {
+        let mut node_link_path = match &node.data.borrow().value {
+            NodeValue::Image(node_link) => node_link.url.clone(),
+            _ => return Err(Error::ImageLinkMissing),
+        };
+
+        if Path::new(&node_link_path).has_root() {
+            warn!(
+                "image path is not a relative path, skipping. [{}]",
+                node_link_path
+            );
+            continue;
+        }
+
+        node_link_path = match Path::new(file_path)
+            .with_file_name(&node_link_path)
+            .normalize()
+            .to_str()
+        {
+            Some(s) => s.to_string(),
+            None => {
+                warn!(
+                    "image path is not valid UTF-8, skipping. [{}]",
+                    node_link_path
+                );
+                continue;
+            }
+        };
+
+        if !Path::new(&node_link_path).is_file() {
+            warn!("image path not valid, skipping: [{}]", &node_link_path);
+            continue;
+        }
+
+        let client = ConfluenceClient::new(&Client {})?;
+        task::block_in_place(|| {
+            info!("uploading attachment [{}]", &node_link_path);
+            tokio::runtime::Handle::current()
+                .block_on(client.upload_attachment(page_id, &node_link_path))
+        })?;
+
+        // Get image alignment property from the NodeValue::Text child.
+        let mut align: Option<Align> = None;
+        if let Some(child) = node.first_child() {
+            if let NodeValue::Text(text) = &child.data.borrow().value {
+                align = Align::from_str(text);
+            }
+        }
+
+        // Replace the NodeValue::Image with NodeValue::Raw.
+        node.data.borrow_mut().value = confluence_image_block(&node_link_path, align);
+
+        // Remove all children of the NodeValue::Image node.
+        let children: Vec<_> = node.children().collect();
+        for child in children {
+            child.detach();
+        }
+    }
+
+    Ok(())
+}
+
+fn confluence_image_block(file_path: &str, alignment: Option<Align>) -> NodeValue {
+    let get_file_name = match Path::new(file_path).file_name() {
+        Some(name) => name.to_str(),
+        None => None,
+    };
+
+    let file_name = match get_file_name {
+        Some(name) => name,
+        None => {
+            warn!("could not get file name for image: {}", file_path);
+            ""
+        }
+    };
+
+    let align = match alignment {
+        Some(align) => align.to_string(),
+        None => "left".to_string(),
+    };
+
+    let raw_html_node = format!(
+        r#"
+             <ac:image ac:align="{}">
+               <ri:attachment ri:filename="{}" />
+             </ac:image>
+        "#,
+        align, file_name
+    )
+    .trim()
+    .to_string();
+
+    NodeValue::Raw(raw_html_node)
+}
+
 fn replace_with_codeblock_macro(codeblock: &NodeCodeBlock) -> NodeValue {
     let language = match codeblock.info.is_empty() {
         true => "plaintext",
@@ -115,11 +260,11 @@ fn replace_with_codeblock_macro(codeblock: &NodeCodeBlock) -> NodeValue {
 
     let raw_html_node = format!(
         r#"
-                    <ac:structured-macro ac:name="code" ac:schema-version="1">
-                    <ac:parameter ac:name="language">{}</ac:parameter>
-                    <ac:plain-text-body><![CDATA[{}]]></ac:plain-text-body>
-                    </ac:structured-macro>
-                "#,
+            <ac:structured-macro ac:name="code" ac:schema-version="1">
+            <ac:parameter ac:name="language">{}</ac:parameter>
+            <ac:plain-text-body><![CDATA[{}]]></ac:plain-text-body>
+            </ac:structured-macro>
+        "#,
         language,
         codeblock.literal.trim_end()
     );
