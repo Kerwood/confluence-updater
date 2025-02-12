@@ -68,6 +68,9 @@ pages:
 
 ![restrictions](./images/restrictions.png)
 
+### Image uploads
+Image links in markdown will get uploaded as attachments and embedded into the Confluence page.
+
 
 ### Superscript Header
 Set the `superscriptHeader` property at either the root or page level to add a small header in superscript on top of each page. The property string supports markdown.
@@ -112,8 +115,9 @@ INFO page:update_confluence_page: confluence_updater::confluence::client: succes
 INFO page:update_confluence_page: confluence_updater::confluence::client: no changes to page, skipping. id="729133252" title="Grafana Install Guide [v.61]" path="./grafana-install.md" sha="fa3d0cdd"
 ```
 
-### Github Action
-A Github Action is available for running Confluce Updater in your Github workflow.
+## Github Action
+
+A supported Github Action is available here: [https://github.com/Kerwood/confluence-updater-action](https://github.com/Kerwood/confluence-updater-action). 
 
 ```yaml
 - name: Confluence Updater
@@ -123,17 +127,6 @@ A Github Action is available for running Confluce Updater in your Github workflo
     user: ${{ secrets.USER }}
     api_token: ${{ secrets.API_TOKEN }}
 ```
-See [kerwood/confluence-updater-action](https://github.com/Kerwood/confluence-updater-action) for more details.
-
-## Code Blocks
-Confluence Updater renders markdown code blocks into a Confluence CodeBlock macro with syntax highlighting. Annotate the code block with a Confluence supported lanuge.
-````
-```rust
-let x = "hello-world"
-```
-````
-
-![code-examples](./images/code-examples.png)
 
 ## Release Notes
 
