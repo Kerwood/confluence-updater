@@ -152,6 +152,7 @@ A GitHub Action is available: [Confluence Updater Action](https://github.com/Ker
 ## Release Notes
 
 ### 2.1.0
+- Added support for superscript page header. See [Superscript Header](#superscript-header)
 - Added support for images. See [Image Uploads](#image-uploads).
 - Added page restriction support. See [Read Only](#read-only).
 - Added link replacement. See [Link Replacement](#link-replacement).
