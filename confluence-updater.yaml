@@ -1,10 +1,15 @@
+superscriptHeader: This page is sourced from [kerwood/confluence-updater](https://github.com/Kerwood/confluence-updater)
+readOnly: true # Default
 pages:
   - filePath: ./path/to/markdown-1.md
     pageId: 353468432
     overrideTitle: Some Other Title
+    superscriptHeader: Some other superscript header # This will override the global superscriptHeader property.
+    readOnly: false # This will override the global readOnly property.
     labels:
       - ci/cd
+
   - filePath: ./path/to/markdown-2.md
     pageId: 353435649
     labels:
-      - ci/cd
+      - label2

@@ -1,5 +1,6 @@
 use super::restriction::Restriction;
 use super::ConfluencePage;
+use crate::config::Page;
 use crate::error::{Error, Result};
 use reqwest::{
     header::{HeaderMap, HeaderValue},
@@ -7,7 +8,7 @@ use reqwest::{
     ClientBuilder, Response,
 };
 use serde::Deserialize;
-use tracing::{debug, info, instrument, Level};
+use tracing::{debug, error, info, instrument, Level};
 
 #[derive(Deserialize, Debug)]
 pub struct PageResponse {
@@ -55,17 +56,17 @@ pub struct ConfluenceClient {
 
 impl ConfluenceClient {
     #[instrument(skip_all, err(Debug, level = Level::DEBUG))]
-    pub fn new<T: ConfluenceClientTrait>(config: &T) -> Result<Self> {
+    pub fn new(fqdn: &str, user: &str, secret: &str) -> Result<Self> {
         let client = ClientBuilder::new().build()?;
-        let base_url = config.fqdn().to_string();
+        let base_url = fqdn.to_string();
 
         debug!(%base_url, "creating confluence client");
 
         Ok(Self {
             client,
             base_url,
-            user: config.username(),
-            secret: config.secret(),
+            user: user.to_string(),
+            secret: secret.to_string(),
         })
     }
 
@@ -193,15 +194,11 @@ impl ConfluenceClient {
     }
 
     #[instrument(skip_all, ret(level = Level::TRACE), err(Debug, level = Level::DEBUG))]
-    pub async fn update_confluence_page<T: UpdatePageTrait>(
-        &self,
-        page: &T,
-    ) -> Result<Option<reqwest::Response>> {
-        let page_id = page.id();
-        let version = self.get_page_version(&page_id).await? + 1;
+    pub async fn update_confluence_page(&self, page: &Page) -> Result<Option<reqwest::Response>> {
+        let version = self.get_page_version(&page.page_id).await? + 1;
 
-        if let Some(sha) = self.get_page_sha(&page_id).await? {
-            if sha == page.sha() {
+        if let Some(sha) = self.get_page_sha(&page.page_id).await? {
+            if sha == page.page_sha {
                 info!("no changes to page, skipping.");
                 return Ok(None);
             }
@@ -216,40 +213,32 @@ impl ConfluenceClient {
             .0
             .to_string();
 
-        let mut labels = page.labels().clone();
-        labels.push(format!("page-sha:{}", page.sha()));
-        labels.push(format!("pa-token:{}", user_label));
+        let labels = vec![
+            format!("page-sha:{}", page.page_sha),
+            format!("pa-token:{}", user_label),
+        ];
 
-        let confluence_page =
-            ConfluencePage::new(&page.title(), version, &labels, &page.html_content());
+        let confluence_page = ConfluencePage::new(page, version).add_labels(labels);
 
         // Below URL is for Confluence APIv1 because v2 does not support updating labels yet.
-        let path = format!("/wiki/rest/api/content/{}", &page_id);
+        let path = format!("/wiki/rest/api/content/{}", &page.page_id);
         let response = self.put(&path, &confluence_page).await?;
 
         info!("successfully updated page.");
 
-        if page.read_only() {
+        if page.read_only == Some(true) {
             let account_id = self.get_current_user().await?.account_id;
-            self.set_page_read_only(&page_id, &account_id).await?;
+            self.set_page_read_only(&page.page_id, &account_id).await?;
             debug!("set 'view only' for anyone else than current user");
+        }
+
+        for image_path in &page.html.image_paths {
+            info!("uploading attachment [{}]", &image_path);
+            self.upload_attachment(&page.page_id, image_path)
+                .await
+                .inspect_err(|error| error!(image=image_path, %error))?;
         }
 
         Ok(Some(response))
     }
-}
-
-pub trait ConfluenceClientTrait {
-    fn fqdn(&self) -> String;
-    fn username(&self) -> String;
-    fn secret(&self) -> String;
-}
-
-pub trait UpdatePageTrait {
-    fn title(&self) -> String;
-    fn id(&self) -> String;
-    fn labels(&self) -> Vec<String>;
-    fn html_content(&self) -> String;
-    fn sha(&self) -> String;
-    fn read_only(&self) -> bool;
 }

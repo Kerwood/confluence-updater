@@ -1,11 +1,11 @@
 mod config;
 mod confluence;
 mod error;
-mod markdown;
+//mod markdown;
 mod render_markdown;
 use clap::{Parser, ValueEnum};
 use config::Config;
-use confluence::{ConfluenceClient, UpdatePageTrait};
+use confluence::ConfluenceClient;
 use std::sync::OnceLock;
 use tracing::{error, span, Level};
 
@@ -97,20 +97,18 @@ async fn main() {
         .with_max_level(log_level)
         .init();
 
-    let config: Config = match args.try_into() {
+    let config = match Config::try_from_async(args).await {
         Ok(config) => config,
-        Err(error) => {
-            error!(%error);
-            std::process::exit(1);
-        }
+        Err(_) => std::process::exit(1),
     };
 
-    let client = match ConfluenceClient::new(&config) {
+    let Config {
+        fqdn, user, secret, ..
+    } = &config;
+
+    let client = match ConfluenceClient::new(fqdn, user, secret) {
         Ok(client) => client,
-        Err(error) => {
-            error!(%error);
-            std::process::exit(1);
-        }
+        Err(_error) => std::process::exit(1),
     };
 
     for page in config.pages.iter() {
@@ -118,16 +116,16 @@ async fn main() {
             Level::INFO,
             "page",
             id = page.page_id,
-            title = page.title(),
+            title = page.title,
             path = page.file_path,
-            sha = page.sha(),
+            sha = page.page_sha,
         );
 
         let _enter = span.enter();
 
-        let _ = client.update_confluence_page(page).await.map_err(|error| {
+        if let Err(error) = client.update_confluence_page(page).await {
             error!(%error);
-            std::process::exit(1);
-        });
+            std::process::exit(1)
+        }
     }
 }
