@@ -1,10 +1,12 @@
 mod config;
 mod confluence;
 mod error;
-mod markdown;
+//mod markdown;
+mod render_markdown;
 use clap::{Parser, ValueEnum};
 use config::Config;
-use confluence::{ConfluenceClient, UpdatePageTrait};
+use confluence::ConfluenceClient;
+use std::sync::OnceLock;
 use tracing::{error, span, Level};
 
 #[derive(Parser, Debug)]
@@ -29,7 +31,6 @@ struct CommandArgs {
 
     #[arg(
         long,
-        default_value = "your-domain.atlassian.net",
         env = "CU_FQDN",
         help = "The fully qualified domain name of your Atlassian Cloud."
     )]
@@ -77,9 +78,17 @@ impl From<LogLevel> for Level {
     }
 }
 
+static FQDN: OnceLock<String> = OnceLock::new();
+static USER: OnceLock<String> = OnceLock::new();
+static SECRET: OnceLock<String> = OnceLock::new();
+
 #[tokio::main]
 async fn main() {
     let args = CommandArgs::parse();
+
+    FQDN.set(args.fqdn.to_owned()).unwrap();
+    USER.set(args.user.to_owned()).unwrap();
+    SECRET.set(args.secret.to_owned()).unwrap();
 
     let log_level: Level = args.log_level.into();
     tracing_subscriber::fmt()
@@ -88,20 +97,18 @@ async fn main() {
         .with_max_level(log_level)
         .init();
 
-    let config: Config = match args.try_into() {
+    let config = match Config::try_from_async(args).await {
         Ok(config) => config,
-        Err(error) => {
-            error!(%error);
-            std::process::exit(1);
-        }
+        Err(_) => std::process::exit(1),
     };
 
-    let client = match ConfluenceClient::new(&config) {
+    let Config {
+        fqdn, user, secret, ..
+    } = &config;
+
+    let client = match ConfluenceClient::new(fqdn, user, secret) {
         Ok(client) => client,
-        Err(error) => {
-            error!(%error);
-            std::process::exit(1);
-        }
+        Err(_error) => std::process::exit(1),
     };
 
     for page in config.pages.iter() {
@@ -109,16 +116,16 @@ async fn main() {
             Level::INFO,
             "page",
             id = page.page_id,
-            title = page.title(),
+            title = page.title,
             path = page.file_path,
-            sha = page.sha(),
+            sha = page.page_sha,
         );
 
         let _enter = span.enter();
 
-        let _ = client.update_confluence_page(page).await.map_err(|error| {
+        if let Err(error) = client.update_confluence_page(page).await {
             error!(%error);
-            std::process::exit(1);
-        });
+            std::process::exit(1)
+        }
     }
 }

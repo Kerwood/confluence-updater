@@ -1,6 +1,6 @@
 [package]
 name = "confluence-updater"
-version = "2.0.0"
+version = "2.1.0"
 edition = "2021"
 description = "Render Markdown files and push them to Confluence Cloud pages."
 authors = ["Patrick Kerwood <patrick@kerwood.dk>"]
@@ -9,16 +9,22 @@ authors = ["Patrick Kerwood <patrick@kerwood.dk>"]
 [dependencies]
 clap = { version = "4.5", features = ["derive", "env"] }
 thiserror = "2.0"
-reqwest = { version = "0.12", features = ["json", "rustls-tls"] }
+reqwest = { version = "0.12", features = [
+  "json",
+  "rustls-tls",
+  "multipart",
+  "stream",
+] }
 serde = { version = "1.0", features = ["derive"] }
 serde_yml = "0.0.12"
 tokio = { version = "1", features = ["full"] }
-url = "2.5"
 tracing = "0.1.41"
 tracing-subscriber = "0.3.19"
 comrak = "0.35"
 sha2 = "0.10.8"
 hex = "0.4.3"
+normalize-path = "0.2.1"
+derive_more = { version = "2.0.1", features = ["debug"] }
 
 [profile.release]
 lto = true

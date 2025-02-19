@@ -1,164 +1,184 @@
-use crate::confluence::{ConfluenceClientTrait, UpdatePageTrait};
 use crate::error::{Error, Result};
-use crate::markdown;
+use crate::render_markdown::HtmlPage;
 use crate::CommandArgs;
+use derive_more::Debug;
 use serde::Deserialize;
 use sha2::{Digest, Sha256};
-use std::cell::RefCell;
 use std::fs;
-use tracing::{debug, error, instrument, Level};
-use url::Url;
+use std::path::Path;
+use tracing::{instrument, span, Level};
+
+// ###################################################### //
+//                     Config Struct                      //
+// ###################################################### //
 
 #[derive(Debug)]
 pub struct Config {
     pub user: String,
+    #[debug("\"<redacted>\"")]
     pub secret: String,
     pub fqdn: String,
-    pub config_path: String,
-    pub pages: Vec<PageConfig>,
+    pub pages: Vec<Page>,
 }
 
+#[derive(Debug)]
+pub struct Page {
+    pub file_path: String,
+    pub page_id: String,
+    pub title: String,
+    pub labels: Vec<String>,
+    pub read_only: Option<bool>,
+    #[allow(dead_code)]
+    pub superscript_header: Option<String>,
+    pub html: HtmlPage,
+    pub page_sha: String,
+}
+
+impl Page {
+    #[instrument(skip_all, ret(level = Level::TRACE), err(Display))]
+    async fn try_from_async(page_config: PageConfig) -> Result<Self> {
+        let html = HtmlPage::new(&page_config).await?;
+
+        let title = match (&page_config.override_title, &html.page_header) {
+            (Some(override_title), _) => override_title,
+            (None, Some(page_title)) => page_title,
+            (None, None) => return Err(Error::PageHeaderMissing),
+        };
+
+        let labels = match &page_config.labels {
+            Some(labels) => labels.to_owned(),
+            None => vec![],
+        };
+
+        let page_sha = page_config.calculate_sha()?;
+
+        let page = Self {
+            file_path: page_config.file_path,
+            page_id: page_config.page_id,
+            title: title.to_string(),
+            labels,
+            read_only: page_config.read_only,
+            superscript_header: page_config.superscript_header,
+            html,
+            page_sha,
+        };
+
+        Ok(page)
+    }
+}
+
+// ###################################################### //
+//                  ConfigFile Struct                     //
+// ###################################################### //
+
 #[derive(Deserialize, Debug)]
-pub struct PageConfigRoot {
-    pub pages: Vec<PageConfig>,
+#[serde(rename_all = "camelCase")]
+pub struct ConfigFile {
+    pages: Vec<PageConfig>,
+    read_only: Option<bool>,
+    superscript_header: Option<String>,
+}
+
+impl ConfigFile {
+    #[instrument(skip_all, ret(level = Level::TRACE), err(Display))]
+    pub fn new(path: &str) -> Result<ConfigFile> {
+        if !Path::new(path).is_file() {
+            return Err(Error::InvalidFilePath(path.to_string()));
+        }
+        let file = fs::read_to_string(path)?;
+        let yaml: ConfigFile = serde_yml::from_str(&file)?;
+        Ok(yaml)
+    }
 }
 
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct PageConfig {
     pub file_path: String,
-    pub override_title: Option<String>,
     pub page_id: String,
-    pub labels: Vec<String>,
-    #[serde(skip)]
-    html: RefCell<Option<String>>,
-    #[serde(skip)]
-    title: RefCell<Option<String>>,
-    #[serde(skip)]
-    page_sha: RefCell<Option<String>>,
+    pub override_title: Option<String>,
+    pub labels: Option<Vec<String>>,
+    pub read_only: Option<bool>,
+    pub superscript_header: Option<String>,
 }
 
 impl PageConfig {
-    fn log_error<E: std::error::Error>(error: E) -> E {
-        debug!(?error);
-        error!(%error);
-        error
-    }
-}
-
-impl UpdatePageTrait for PageConfig {
-    #[instrument(skip_all, ret(level = Level::TRACE), fields(id = self.page_id,))]
-    fn title(&self) -> String {
-        if let Some(title) = self.title.borrow().as_ref() {
-            return title.to_string();
+    #[instrument(skip_all, ret(level = Level::TRACE), err(Debug, level = Level::DEBUG))]
+    fn calculate_sha(&self) -> Result<String> {
+        if !Path::new(&self.file_path).is_file() {
+            return Err(Error::InvalidFilePath(self.file_path.to_string()));
         }
 
-        if let Some(title) = &self.override_title {
-            return title.to_string();
+        let mut content = std::fs::read_to_string(&self.file_path)?;
+        content.push_str(self.override_title.as_ref().unwrap_or(&"".to_string()));
+        content.push_str(self.superscript_header.as_ref().unwrap_or(&"".to_string()));
+
+        if let Some(vec) = &self.labels {
+            content.push_str(&vec.join(""));
         }
-
-        match markdown::get_page_title(&self.file_path) {
-            Ok(title) => {
-                *self.title.borrow_mut() = Some(title.to_string());
-                title
-            }
-            Err(error) => {
-                Self::log_error(error);
-                std::process::exit(1);
-            }
-        }
-    }
-
-    #[instrument(skip_all, ret(level = Level::TRACE), fields(id = self.page_id,))]
-    fn id(&self) -> String {
-        self.page_id.to_owned()
-    }
-
-    #[instrument(skip_all, ret(level = Level::TRACE), fields(id = self.page_id,))]
-    fn labels(&self) -> Vec<String> {
-        self.labels.to_owned()
-    }
-
-    #[instrument(skip_all, ret(level = Level::TRACE), fields(id = self.page_id,))]
-    fn html_content(&self) -> String {
-        if let Some(html) = self.html.borrow().as_ref() {
-            return html.to_string();
-        }
-
-        match markdown::render_markdown_file(&self.file_path) {
-            Ok(html) => {
-                *self.html.borrow_mut() = Some(html.to_string());
-                html
-            }
-            Err(error) => {
-                Self::log_error(error);
-                std::process::exit(1);
-            }
-        }
-    }
-
-    #[instrument(skip_all, ret(level = Level::TRACE), fields(id = self.page_id,))]
-    fn sha(&self) -> String {
-        if let Some(sha) = self.page_sha.borrow().as_ref() {
-            return sha.to_string();
-        }
-
-        let mut content = match std::fs::read_to_string(&self.file_path) {
-            Ok(content) => content,
-            Err(error) => {
-                Self::log_error(error);
-                std::process::exit(1);
-            }
-        };
-
-        content.push_str(&self.title());
 
         let mut hasher = Sha256::new();
         hasher.update(content);
 
         let hash = hasher.finalize();
         let sha = hex::encode(&hash[0..4]);
-        *self.page_sha.borrow_mut() = Some(sha.to_string());
-        sha
+        Ok(sha)
     }
 }
 
-impl ConfluenceClientTrait for Config {
-    fn fqdn(&self) -> Result<url::Url> {
-        let mut fqdn = self.fqdn.to_owned();
-        if !(fqdn.starts_with("https://") || fqdn.starts_with("http://")) {
-            fqdn = format!("https://{}", fqdn);
-        }
-        Url::parse(fqdn.as_ref()).map_err(Error::from)
-    }
+// ###################################################### //
+//             TryFrom CommandArgs -> Config              //
+// ###################################################### //
 
-    fn username(&self) -> String {
-        self.user.to_owned()
-    }
+impl Config {
+    #[instrument(skip_all, ret(level = Level::TRACE))]
+    pub async fn try_from_async(args: CommandArgs) -> Result<Self> {
+        let config_file = ConfigFile::new(&args.config_path)?;
 
-    fn secret(&self) -> String {
-        self.secret.to_owned()
-    }
-}
+        let mut pages: Vec<Page> = vec![];
 
-impl TryFrom<CommandArgs> for Config {
-    type Error = Error;
+        for mut page_config in config_file.pages {
+            let span = span!(
+                Level::INFO,
+                "page",
+                id = page_config.page_id,
+                path = page_config.file_path
+            );
 
-    #[instrument(skip_all, ret(level = Level::TRACE), err(Debug, level = Level::DEBUG))]
-    fn try_from(args: CommandArgs) -> Result<Self, Self::Error> {
-        let config_file = fs::read_to_string(&args.config_path)?;
-        let mut config: PageConfigRoot = serde_yml::from_str(&config_file)?;
+            let _enter = span.enter();
 
-        for page in config.pages.iter_mut() {
-            page.labels.extend(args.labels.to_owned());
+            // Overwrite superscript_header if it's set globally and not explicitly on the page.
+            if config_file.superscript_header.is_some() && page_config.superscript_header.is_none()
+            {
+                page_config.superscript_header = config_file.superscript_header.clone();
+            }
+
+            // If there are not labes on the page config, create an empty vec.
+            if page_config.labels.is_none() {
+                page_config.labels = Some(vec![]);
+            }
+
+            // Add global cli labels to the page config.
+            if let Some(ref mut vec) = page_config.labels {
+                vec.extend(args.labels.iter().cloned())
+            }
+
+            // Set default read_only to true or overwrite read_only if it's set globally and not explicitly on the page.
+            page_config.read_only = match (config_file.read_only, page_config.read_only) {
+                (None, None) => Some(true),
+                (_, Some(page)) => Some(page),
+                (Some(config), None) => Some(config),
+            };
+
+            let page = Page::try_from_async(page_config).await?;
+            pages.push(page);
         }
 
         let config = Self {
             user: args.user,
             secret: args.secret,
             fqdn: args.fqdn,
-            config_path: args.config_path,
-            pages: config.pages,
+            pages,
         };
 
         Ok(config)

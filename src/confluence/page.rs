@@ -2,6 +2,8 @@ use serde::Serialize;
 use std::vec::Vec;
 use tracing::{instrument, Level};
 
+use crate::config::Page;
+
 #[derive(Serialize, Debug)]
 pub struct ConfluencePage {
     pub title: String,
@@ -49,21 +51,28 @@ impl From<String> for Label {
 
 impl ConfluencePage {
     #[instrument(ret(level = Level::TRACE))]
-    pub fn new(title: &str, version: u64, labels: &[String], html_content: &str) -> Self {
+    pub fn new(page: &Page, version: u64) -> Self {
         Self {
-            title: title.to_string(),
+            title: page.title.to_string(),
             type_field: "page".to_string(),
             status: "current".to_string(),
             version: Version { number: version },
             body: Body {
                 storage: Storage {
-                    value: html_content.to_string(),
+                    value: page.html.html.to_string(),
                     representation: "storage".to_string(),
                 },
             },
             metadata: Metadata {
-                labels: labels.iter().cloned().map(Label::from).collect(),
+                labels: page.labels.iter().cloned().map(Label::from).collect(),
             },
         }
+    }
+
+    pub fn add_labels(mut self, labels: Vec<String>) -> Self {
+        self.metadata
+            .labels
+            .extend(labels.iter().cloned().map(Label::from));
+        self
     }
 }

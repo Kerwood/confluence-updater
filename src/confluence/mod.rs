@@ -1,4 +1,5 @@
 mod client;
 mod page;
-pub use client::{ConfluenceClient, ConfluenceClientTrait, UpdatePageTrait};
+mod restriction;
+pub use client::ConfluenceClient;
 pub use page::ConfluencePage;
