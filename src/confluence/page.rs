@@ -1,8 +1,8 @@
+use crate::config::Page;
+use regex::Regex;
 use serde::Serialize;
 use std::vec::Vec;
-use tracing::{instrument, Level};
-
-use crate::config::Page;
+use tracing::{instrument, warn, Level};
 
 #[derive(Serialize, Debug)]
 pub struct ConfluencePage {
@@ -43,15 +43,18 @@ pub struct Label {
 
 impl From<String> for Label {
     fn from(label: String) -> Self {
-        Label {
-            name: label.replace(' ', "-"),
-        }
+        Label { name: label }
     }
 }
 
 impl ConfluencePage {
-    #[instrument(ret(level = Level::TRACE))]
+    #[instrument(skip_all, ret(level = Level::TRACE))]
     pub fn new(page: &Page, version: u64) -> Self {
+        let labels = filter_valid_labels(&page.labels)
+            .into_iter()
+            .map(Label::from)
+            .collect();
+
         Self {
             title: page.title.to_string(),
             type_field: "page".to_string(),
@@ -63,9 +66,7 @@ impl ConfluencePage {
                     representation: "storage".to_string(),
                 },
             },
-            metadata: Metadata {
-                labels: page.labels.iter().cloned().map(Label::from).collect(),
-            },
+            metadata: Metadata { labels },
         }
     }
 
@@ -75,4 +76,22 @@ impl ConfluencePage {
             .extend(labels.iter().cloned().map(Label::from));
         self
     }
+}
+
+pub fn filter_valid_labels(labels: &[String]) -> Vec<String> {
+    let pattern = r"^[a-z0-9\$%'+\-/=\_`{}|~]+$";
+    let regex = Regex::new(pattern).expect("invalid regex patteren");
+
+    let filter_labels = |label| match regex.is_match(label) {
+        true => Some(label.to_string()),
+        false => {
+            warn!(
+                "invalid label [{}]. labels must match the following regex: {}, skipping..",
+                label, pattern
+            );
+            None
+        }
+    };
+
+    labels.iter().filter_map(|x| filter_labels(x)).collect()
 }

@@ -1,3 +1,4 @@
+use crate::confluence;
 use crate::error::{Error, Result};
 use crate::render_markdown::HtmlPage;
 use crate::CommandArgs;
@@ -158,9 +159,10 @@ impl Config {
                 page_config.labels = Some(vec![]);
             }
 
-            // Add global cli labels to the page config.
+            // Add global cli labels to the page config and filter our invalid labels.
             if let Some(ref mut vec) = page_config.labels {
-                vec.extend(args.labels.iter().cloned())
+                vec.extend(args.labels.iter().cloned());
+                *vec = confluence::filter_valid_labels(vec);
             }
 
             // Set default read_only to true or overwrite read_only if it's set globally and not explicitly on the page.

@@ -13,7 +13,7 @@ Confluence Cloud requires personal access tokens for authentication.
 
 Generate an API token at: [Atlassian API Tokens.](https://id.atlassian.com/manage-profile/security/api-tokens)
 
-The tool applies a label using the local part of the email associated with the token. For example, `patrick@kerwood.dk` will have the label `pa-token:patrick` applied. This labeling system helps track and replace tokens when necessary.
+The tool applies a label using the local part of the email associated with the token. For example, `patrick@kerwood.dk` will have the label `pa-token/patrick` applied. This labeling system helps track and replace tokens when necessary.
 
 By setting the `superscriptHeader` property in the configuration, you can quickly locate Confluence pages linked to a specific repository.
 
@@ -150,6 +150,10 @@ A GitHub Action is available: [Confluence Updater Action](https://github.com/Ker
 ```
 
 ## Release Notes
+
+### 2.1.1
+- Changed the `pa-token:xxx` and `page-sha:xxx` labels to use supported characters. (`pa-token/xxx`, `page-sha/xxx`)
+- Added a regex check to all labels. If labes are not valid they will be skipped and a warning will be emitted.
 
 ### 2.1.0
 - Added support for superscript page header. See [Superscript Header](#superscript-header)

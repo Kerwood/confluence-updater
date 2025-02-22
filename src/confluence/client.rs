@@ -174,8 +174,8 @@ impl ConfluenceClient {
             Some(labels) => labels
                 .results
                 .iter()
-                .filter(|x| x.name.starts_with("page-sha:"))
-                .map(|x| x.name.split("page-sha:").collect::<String>())
+                .filter(|x| x.name.starts_with("page-sha/"))
+                .map(|x| x.name.split("page-sha/").collect::<String>())
                 .collect(),
             None => String::new(),
         };
@@ -214,8 +214,8 @@ impl ConfluenceClient {
             .to_string();
 
         let labels = vec![
-            format!("page-sha:{}", page.page_sha),
-            format!("pa-token:{}", user_label),
+            format!("page-sha/{}", page.page_sha),
+            format!("pa-token/{}", user_label),
         ];
 
         let confluence_page = ConfluencePage::new(page, version).add_labels(labels);
