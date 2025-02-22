@@ -9,6 +9,7 @@ use normalize_path::NormalizePath;
 use serde::Deserialize;
 use std::{cell::RefCell, collections::HashSet, path::Path};
 use tracing::{debug, warn};
+use tracing::{debug, instrument, warn, Level};
 
 type NodeRef<'a> = &'a Node<'a, RefCell<Ast>>;
 
@@ -56,7 +57,7 @@ pub struct HtmlPage {
 }
 
 impl HtmlPage {
-    // TODO: Instrument maybe ?
+    #[instrument(skip_all, ret(level = Level::TRACE), err(Debug, level = Level::DEBUG))]
     pub async fn new(page_config: &PageConfig) -> Result<HtmlPage> {
         let md_file = std::fs::read_to_string(&page_config.file_path)?;
         let arena = Arena::new();
