@@ -8,7 +8,7 @@ use comrak::{
 use normalize_path::NormalizePath;
 use serde::Deserialize;
 use std::{cell::RefCell, collections::HashSet, path::Path};
-use tracing::{debug, warn};
+use tracing::{debug, instrument, warn, Level};
 
 type NodeRef<'a> = &'a Node<'a, RefCell<Ast>>;
 
@@ -56,7 +56,7 @@ pub struct HtmlPage {
 }
 
 impl HtmlPage {
-    // TODO: Instrument maybe ?
+    #[instrument(skip_all, ret(level = Level::TRACE), err(Debug, level = Level::DEBUG))]
     pub async fn new(page_config: &PageConfig) -> Result<HtmlPage> {
         let md_file = std::fs::read_to_string(&page_config.file_path)?;
         let arena = Arena::new();
@@ -65,11 +65,11 @@ impl HtmlPage {
         options.extension.superscript = true;
 
         let root_node = parse_document(&arena, &md_file, &options);
-        let title = get_h1_header(root_node);
 
-        remove_h1_header(root_node);
-        replace_codeblock_with_html(root_node);
+        let title = get_and_remove_h1_header(root_node);
         let image_paths = get_image_paths(root_node, &page_config.file_path);
+
+        replace_codeblock_with_html(root_node);
         replace_image_node_with_html(root_node);
         replace_page_link(root_node).await?;
 
@@ -139,19 +139,8 @@ fn get_image_paths(root_node: NodeRef<'_>, md_file_path: &str) -> Vec<String> {
         .collect::<Vec<String>>()
 }
 
-// Removes the very first child of the AST if it is a h1 header.
-fn remove_h1_header(root_node: NodeRef<'_>) {
-    if let Some(node) = root_node.first_child() {
-        if let NodeValue::Heading(header) = node.data.borrow().value {
-            if header.level == 1 {
-                debug!("first child of root node is h1, detaching node.");
-                node.detach();
-            }
-        }
-    }
-}
-// TODO: May this could be one function.
-fn get_h1_header(root_node: NodeRef<'_>) -> Option<String> {
+// Retrieves the NodeValue::Text if the first child is a h1 header, and then removes it.
+fn get_and_remove_h1_header(root_node: NodeRef<'_>) -> Option<String> {
     let first_child = root_node.first_child()?;
     let child_value = &first_child.data.borrow().value;
 
@@ -166,6 +155,9 @@ fn get_h1_header(root_node: NodeRef<'_>) -> Option<String> {
             title.push_str(text);
         }
     }
+
+    debug!("first child of root node is h1, detaching node.");
+    first_child.detach();
 
     Some(title)
 }

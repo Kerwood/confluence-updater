@@ -55,10 +55,16 @@ pub struct ConfluenceClient {
 }
 
 impl ConfluenceClient {
-    #[instrument(skip_all, err(Debug, level = Level::DEBUG))]
+    #[instrument(skip_all, name = "confluence_client::new" err(Debug, level = Level::DEBUG))]
     pub fn new(fqdn: &str, user: &str, secret: &str) -> Result<Self> {
         let client = ClientBuilder::new().build()?;
         let base_url = fqdn.to_string();
+
+        if !base_url.starts_with("https://") {
+            let error = Error::HttpsProtocolSchemeMissing(base_url);
+            error!(%error);
+            return Err(error);
+        }
 
         debug!(%base_url, "creating confluence client");
 
@@ -174,8 +180,8 @@ impl ConfluenceClient {
             Some(labels) => labels
                 .results
                 .iter()
-                .filter(|x| x.name.starts_with("page-sha:"))
-                .map(|x| x.name.split("page-sha:").collect::<String>())
+                .filter(|x| x.name.starts_with("page-sha/"))
+                .map(|x| x.name.split("page-sha/").collect::<String>())
                 .collect(),
             None => String::new(),
         };
@@ -214,9 +220,16 @@ impl ConfluenceClient {
             .to_string();
 
         let labels = vec![
-            format!("page-sha:{}", page.page_sha),
-            format!("pa-token:{}", user_label),
+            format!("page-sha/{}", page.page_sha),
+            format!("pa-token/{}", user_label),
         ];
+
+        for image_path in &page.html.image_paths {
+            info!("uploading attachment [{}]", &image_path);
+            self.upload_attachment(&page.page_id, image_path)
+                .await
+                .inspect_err(|error| error!(image=image_path, %error))?;
+        }
 
         let confluence_page = ConfluencePage::new(page, version).add_labels(labels);
 
@@ -230,13 +243,6 @@ impl ConfluenceClient {
             let account_id = self.get_current_user().await?.account_id;
             self.set_page_read_only(&page.page_id, &account_id).await?;
             debug!("set 'view only' for anyone else than current user");
-        }
-
-        for image_path in &page.html.image_paths {
-            info!("uploading attachment [{}]", &image_path);
-            self.upload_attachment(&page.page_id, image_path)
-                .await
-                .inspect_err(|error| error!(image=image_path, %error))?;
         }
 
         Ok(Some(response))

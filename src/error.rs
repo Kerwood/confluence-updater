@@ -21,20 +21,14 @@ pub enum Error {
     )]
     PageHeaderMissing,
 
-    #[error("Protocol scheme is missing from FQDN: [{0}]")]
-    ProtocolSchemeMissing(String),
+    #[error("HTTPS protocol scheme missing from FQDN: [{0}]")]
+    HttpsProtocolSchemeMissing(String),
 
     #[error("File path is invalid: [{0}]")]
     InvalidFilePath(String),
 
     #[error("Failed to get the local part of the current user email.")]
     CurrentUserEmailMissing,
-
-    #[error("The link/path for image is missing")]
-    ImageLinkMissing,
-
-    #[error("A confluence page ID annotation was found on a link, but could not be parsed [{0}]")]
-    LinkIdMissing(String),
 }
 
 pub type Result<T, E = Error> = std::result::Result<T, E>;
