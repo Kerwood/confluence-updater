@@ -224,6 +224,13 @@ impl ConfluenceClient {
             format!("pa-token/{}", user_label),
         ];
 
+        for image_path in &page.html.image_paths {
+            info!("uploading attachment [{}]", &image_path);
+            self.upload_attachment(&page.page_id, image_path)
+                .await
+                .inspect_err(|error| error!(image=image_path, %error))?;
+        }
+
         let confluence_page = ConfluencePage::new(page, version).add_labels(labels);
 
         // Below URL is for Confluence APIv1 because v2 does not support updating labels yet.
@@ -236,13 +243,6 @@ impl ConfluenceClient {
             let account_id = self.get_current_user().await?.account_id;
             self.set_page_read_only(&page.page_id, &account_id).await?;
             debug!("set 'view only' for anyone else than current user");
-        }
-
-        for image_path in &page.html.image_paths {
-            info!("uploading attachment [{}]", &image_path);
-            self.upload_attachment(&page.page_id, image_path)
-                .await
-                .inspect_err(|error| error!(image=image_path, %error))?;
         }
 
         Ok(Some(response))

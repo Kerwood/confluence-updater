@@ -155,6 +155,7 @@ A GitHub Action is available: [Confluence Updater Action](https://github.com/Ker
 - Changed the `pa-token:xxx` and `page-sha:xxx` labels to use supported characters. (`pa-token/xxx`, `page-sha/xxx`)
 - Added a regex check to all labels. If labes are not valid they will be skipped and a warning will be emitted.
 - Added better error logs if FQDN is missing `https://` protocol scheme.
+- Confluence updater now uploads page images before it updates the page.
 
 ### 2.1.0
 - Added support for superscript page header. See [Superscript Header](#superscript-header)
