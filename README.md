@@ -97,6 +97,12 @@ You can control image alignment by specifying `align-left`, `align-right`, or `a
 ![align-center](./images/bender.png)
 ```
 
+**NOTE:** The Confluence API is a bit unstable when it comes to uploading attachments.
+The is also the reason that images are not uploaded asynchronously. Some times you will recieve below error for no apparent reason.
+```
+ERROR image="images/superscriptheader.png" error=HTTP request, HTTP status server error (500 Internal Server Error)
+```
+
 ### Superscript Header
 Add a small superscript header with Markdown support at the top of each page by setting `superscriptHeader` at the root or page level:
 
