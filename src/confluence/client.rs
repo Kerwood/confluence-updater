@@ -55,10 +55,16 @@ pub struct ConfluenceClient {
 }
 
 impl ConfluenceClient {
-    #[instrument(skip_all, err(Debug, level = Level::DEBUG))]
+    #[instrument(skip_all, name = "confluence_client::new" err(Debug, level = Level::DEBUG))]
     pub fn new(fqdn: &str, user: &str, secret: &str) -> Result<Self> {
         let client = ClientBuilder::new().build()?;
         let base_url = fqdn.to_string();
+
+        if !base_url.starts_with("https://") {
+            let error = Error::HttpsProtocolSchemeMissing(base_url);
+            error!(%error);
+            return Err(error);
+        }
 
         debug!(%base_url, "creating confluence client");
 

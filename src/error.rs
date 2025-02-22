@@ -21,8 +21,8 @@ pub enum Error {
     )]
     PageHeaderMissing,
 
-    #[error("Protocol scheme is missing from FQDN: [{0}]")]
-    ProtocolSchemeMissing(String),
+    #[error("HTTPS protocol scheme missing from FQDN: [{0}]")]
+    HttpsProtocolSchemeMissing(String),
 
     #[error("File path is invalid: [{0}]")]
     InvalidFilePath(String),

@@ -108,7 +108,7 @@ async fn main() {
 
     let client = match ConfluenceClient::new(fqdn, user, secret) {
         Ok(client) => client,
-        Err(_error) => std::process::exit(1),
+        Err(_) => std::process::exit(1),
     };
 
     for page in config.pages.iter() {
