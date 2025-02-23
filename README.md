@@ -98,7 +98,9 @@ You can control image alignment by specifying `align-left`, `align-right`, or `a
 ```
 
 **NOTE:** The Confluence API is a bit unstable when it comes to uploading attachments.
-The is also the reason that images are not uploaded asynchronously. Some times you will recieve below error for no apparent reason.
+This is the reason that images are not uploaded asynchronously, the API simply can't handle it.
+
+Some times you will recieve below error for no apparent reason.
 ```
 ERROR image="images/superscriptheader.png" error=HTTP request, HTTP status server error (500 Internal Server Error)
 ```
@@ -157,13 +159,13 @@ A GitHub Action is available: [Confluence Updater Action](https://github.com/Ker
 
 ## Release Notes
 
-### 2.1.1
+### v2.1.1
 - Changed the `pa-token:xxx` and `page-sha:xxx` labels to use supported characters. (`pa-token/xxx`, `page-sha/xxx`)
 - Added a regex check to all labels. If labes are not valid they will be skipped and a warning will be emitted.
 - Added better error logs if FQDN is missing `https://` protocol scheme.
 - Confluence updater now uploads page images before it updates the page.
 
-### 2.1.0
+### v2.1.0
 - Added support for superscript page header. See [Superscript Header](#superscript-header)
 - Added support for images. See [Image Uploads](#image-uploads).
 - Added page restriction support. See [Read Only](#read-only).
@@ -174,7 +176,7 @@ A GitHub Action is available: [Confluence Updater Action](https://github.com/Ker
 - Protocol schema (`https://`) is now mandatory in the FQDN parameter.
 - Fixed [#3](https://github.com/Kerwood/confluence-updater/issues/3): indentation issue in code blocks.
 
-### 2.0.0 (Breaking Changes)
+### v2.0.0 (Breaking Changes)
 - Extracts the top `h1` header from Markdown as the Confluence page title.
 - Added `overrideTitle` property to specify a custom title.
 - Switched to `CodeBlock` macro for syntax highlighting.
