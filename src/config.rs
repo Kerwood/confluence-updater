@@ -167,7 +167,7 @@ impl Config {
 
             // Set default read_only to true or overwrite read_only if it's set globally and not explicitly on the page.
             page_config.read_only = match (config_file.read_only, page_config.read_only) {
-                (None, None) => Some(true),
+                (None, None) => Some(false),
                 (_, Some(page)) => Some(page),
                 (Some(config), None) => Some(config),
             };
