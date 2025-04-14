@@ -1,11 +1,11 @@
 superscriptHeader: This page is sourced from [kerwood/confluence-updater](https://github.com/Kerwood/confluence-updater) # Optional
-readOnly: true # Default. Optional
+# readOnly: false # Optional. If omitted Confluence Updater will not update page restrictions.
 pages:
   - filePath: ./path/to/markdown-1.md
     pageId: 353468432
     overrideTitle: Some Other Title # Optional
     superscriptHeader: Some other superscript header # Optional. This will override the global superscriptHeader property.
-    readOnly: false # Optional. This will override the global readOnly property.
+    readOnly: true # Optional. This will override the global readOnly property.
     labels: # Optional
       - ci/cd 
 
