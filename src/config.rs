@@ -114,6 +114,14 @@ impl PageConfig {
         content.push_str(self.override_title.as_ref().unwrap_or(&"".to_string()));
         content.push_str(self.superscript_header.as_ref().unwrap_or(&"".to_string()));
 
+        let restrictions = match self.read_only {
+            Some(true) => "true",
+            Some(false) => "false",
+            None => "none",
+        };
+
+        content.push_str(restrictions);
+
         if let Some(vec) = &self.labels {
             content.push_str(&vec.join(""));
         }
@@ -167,7 +175,7 @@ impl Config {
 
             // Set default read_only to true or overwrite read_only if it's set globally and not explicitly on the page.
             page_config.read_only = match (config_file.read_only, page_config.read_only) {
-                (None, None) => Some(false),
+                (None, None) => None,
                 (_, Some(page)) => Some(page),
                 (Some(config), None) => Some(config),
             };

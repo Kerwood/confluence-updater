@@ -25,7 +25,7 @@ struct User {
 }
 
 impl Restriction {
-    pub fn new(account_id: &str) -> Self {
+    pub fn read_only(account_id: &str) -> Self {
         Self {
             results: vec![Result {
                 operation: "update".to_string(),
@@ -35,6 +35,15 @@ impl Restriction {
                         account_id: account_id.to_string(),
                     }],
                 },
+            }],
+        }
+    }
+
+    pub fn no_restrictions() -> Self {
+        Self {
+            results: vec![Result {
+                operation: "update".to_string(),
+                restrictions: Restrictions { user: vec![] },
             }],
         }
     }

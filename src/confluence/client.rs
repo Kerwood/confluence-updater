@@ -192,8 +192,15 @@ impl ConfluenceClient {
         }
     }
 
+    async fn remove_page_restriction(&self, page_id: &str) -> Result<()> {
+        let body = Restriction::no_restrictions();
+        let path = format!("/wiki/rest/api/content/{}/restriction", page_id);
+        self.put(&path, &body).await?;
+        Ok(())
+    }
+
     async fn set_page_read_only(&self, page_id: &str, account_id: &str) -> Result<()> {
-        let body = Restriction::new(account_id);
+        let body = Restriction::read_only(account_id);
         let path = format!("/wiki/rest/api/content/{}/restriction", page_id);
         self.put(&path, &body).await?;
         Ok(())
@@ -243,6 +250,9 @@ impl ConfluenceClient {
             let account_id = self.get_current_user().await?.account_id;
             self.set_page_read_only(&page.page_id, &account_id).await?;
             debug!("set 'view only' for anyone else than current user");
+        } else if page.read_only == Some(false) {
+            self.remove_page_restriction(&page.page_id).await?;
+            debug!("removing all page restrictions for users.");
         }
 
         Ok(Some(response))
