@@ -45,17 +45,17 @@ INFO No changes to page, skipping. id="729133252" title="Grafana Install Guide [
 
 ### Command-Line Options
 ```sh
-Usage: confluence-updater [OPTIONS] --user <USER> --secret <SECRET>
+Usage: confluence-updater [OPTIONS] --user <USER> --secret <SECRET> --fqdn <FQDN>
 
 Options:
-  -u, --user <USER>                Confluence login user [env: CU_USER=]
-  -s, --secret <SECRET>            API token [env: CU_SECRET=]
-      --fqdn <FQDN>                Atlassian Cloud domain [env: CU_FQDN=]
-  -c, --config-path <CONFIG_PATH>  Config file path [default: ./confluence-updater.yaml]
-  -l, --label <label>              Add labels to pages (repeatable)
-      --log-level <LOG_LEVEL>      Log level [default: info] [trace, debug, info, warn, error]
-  -h, --help                       Show help
-  -V, --version                    Show version
+  -u, --user <USER>                Confluence user to login with [env: CU_USER=]
+  -s, --secret <SECRET>            The token/secret to use. https://id.atlassian.com/manage-profile/security/api-tokens [env: CU_SECRET=]
+      --fqdn <FQDN>                The fully qualified domain name of your Atlassian Cloud. [env: CU_FQDN=]
+  -c, --config-path <CONFIG_PATH>  The path to the config file. [env: CU_CONFIG_PATH=] [default: ./confluence-updater.yaml]
+  -l, --label <label>              Add a label to all updating pages. Can be used multiple times.
+      --log-level <LOG_LEVEL>      Log Level. [env: CU_LOG_LEVEL=] [default: info] [possible values: trace, debug, info, warn, error]
+  -h, --help                       Print help
+  -V, --version                    Print version
 ```
 
 ## Features
@@ -68,6 +68,7 @@ The following elements are included in the SHA, meaning any changes to them will
 - Override title.
 - Superscript header.
 - Labels.
+- Read Only boolean
 
 ### Link Replacement
 Convert relative Markdown file links to Confluence page links using `pid:<page-id>`:
@@ -77,8 +78,16 @@ Convert relative Markdown file links to Confluence page links using `pid:<page-i
 ```
 
 ### Read-Only
-Restrict editing to the token owner by setting `readOnly` at the root or page level:
+If the `readOnly` property is **not** set at the global and page level configuration, Confluence Updater will not
+modify any existing page restrictions. This allows page restrictions to be set manually within Confluence without
+being overwritten by Confluence Updater.
 
+- Setting `readOnly: true` grants read-only access to everyone except the access token owner, who will retain write permissions.
+- Setting `readOnly: false` removes all user restrictions, effectively making the page editable by anyone in the Confluence space.
+
+Changing this setting will affect the `sha` label and trigger a page update.
+
+#### Example
 ```yaml
 readOnly: true
 pages:
@@ -158,6 +167,12 @@ A GitHub Action is available: [Confluence Updater Action](https://github.com/Ker
 ```
 
 ## Release Notes
+
+### v2.2.0
+- Added support for removing page restrictions by setting `readOnly: false`. See [Read Only](#read-only)
+- Added support for preserving existing page restrictions by omitting the `readOnly` property entirely. See [Read Only](#read-only)
+- Added validation for `fqdn`, `user`, and `secret` arguments to ensure values are **not** quoted, with clear error messages for invalid input.
+- Changed log level env name from `LOG_LEVEL` to `CU_LOG_LEVEL`.
 
 ### v2.1.1
 - Changed the `pa-token:xxx` and `page-sha:xxx` labels to use supported characters. (`pa-token/xxx`, `page-sha/xxx`)
