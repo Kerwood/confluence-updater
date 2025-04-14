@@ -55,7 +55,13 @@ struct CommandArgs {
     )]
     labels: Vec<String>,
 
-    #[arg(long, env, default_value = "info", help = "Log Level.", global = true)]
+    #[arg(
+        long,
+        env = "CU_LOG_LEVEL",
+        default_value = "info",
+        help = "Log Level.",
+        global = true
+    )]
     log_level: LogLevel,
 }
 
