@@ -1,7 +1,6 @@
 mod config;
 mod confluence;
 mod error;
-//mod markdown;
 mod render_markdown;
 use clap::{Parser, ValueEnum};
 use config::Config;
@@ -18,21 +17,23 @@ use tracing::{error, span, Level};
     arg_required_else_help = true
 )]
 struct CommandArgs {
-    #[arg(short, long, env = "CU_USER", help = "Confluence user to login with")]
+    #[arg(short, long, env = "CU_USER", help = "Confluence user to login with", value_parser = validate_no_quotes)]
     user: String,
 
     #[arg(
         short,
         long,
         env = "CU_SECRET",
-        help = "The token/secret to use. https://id.atlassian.com/manage-profile/security/api-tokens"
+        help = "The token/secret to use. https://id.atlassian.com/manage-profile/security/api-tokens",
+        value_parser = validate_no_quotes
     )]
     secret: String,
 
     #[arg(
         long,
         env = "CU_FQDN",
-        help = "The fully qualified domain name of your Atlassian Cloud."
+        help = "The fully qualified domain name of your Atlassian Cloud.",
+        value_parser = validate_no_quotes
     )]
     fqdn: String,
 
@@ -41,7 +42,8 @@ struct CommandArgs {
         long,
         default_value = "./confluence-updater.yaml",
         env = "CU_CONFIG_PATH",
-        help = "The path to the config file."
+        help = "The path to the config file.",
+        value_parser = validate_no_quotes
     )]
     config_path: String,
 
@@ -76,6 +78,17 @@ impl From<LogLevel> for Level {
             LogLevel::Error => Level::ERROR,
         }
     }
+}
+
+fn validate_no_quotes(s: &str) -> Result<String, String> {
+    let arg = s.trim();
+    let is_quoted = |s: &str, c: char| (s.starts_with(c) && s.ends_with(c));
+
+    if (is_quoted(arg, '"')) || (is_quoted(arg, '\'')) {
+        return Err(String::from("Value must not be quoted, remove the quotes."));
+    }
+
+    Ok(arg.to_string())
 }
 
 static FQDN: OnceLock<String> = OnceLock::new();
