@@ -63,6 +63,7 @@ impl HtmlPage {
 
         let mut options = Options::default();
         options.extension.superscript = true;
+        options.extension.table = true;
 
         let root_node = parse_document(&arena, &md_file, &options);
 
