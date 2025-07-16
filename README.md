@@ -168,6 +168,9 @@ A GitHub Action is available: [Confluence Updater Action](https://github.com/Ker
 
 ## Release Notes
 
+### v2.3.0
+- Added support for tables.
+
 ### v2.2.0
 - Added support for removing page restrictions by setting `readOnly: false`. See [Read Only](#read-only)
 - Added support for preserving existing page restrictions by omitting the `readOnly` property entirely. See [Read Only](#read-only)
