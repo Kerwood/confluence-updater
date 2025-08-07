@@ -40,7 +40,7 @@ impl std::fmt::Display for Align {
             Align::Right => "right",
             Align::Center => "center",
         };
-        write!(f, "{}", align)
+        write!(f, "{align}")
     }
 }
 
@@ -75,7 +75,7 @@ impl HtmlPage {
         replace_page_link(root_node).await?;
 
         if let Some(sup) = &page_config.superscript_header {
-            let super_string = format!("^{}^", sup);
+            let super_string = format!("^{sup}^");
             let super_node = parse_document(&arena, &super_string, &options);
             root_node.prepend(super_node);
         }
@@ -194,12 +194,11 @@ fn replace_image_node_with_html(root_node: NodeRef<'_>) {
             let raw_html_node = format!(
                 r#"
                     <p>
-                    <ac:image ac:align="{}">
-                        <ri:attachment ri:filename="{}" />
+                    <ac:image ac:align="{alignment}">
+                        <ri:attachment ri:filename="{file_name}" />
                     </ac:image>
                     </p>
-                "#,
-                alignment, file_name
+                "#
             )
             .trim()
             .to_string();

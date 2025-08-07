@@ -121,7 +121,7 @@ impl ConfluenceClient {
     #[instrument(skip_all, ret(level = Level::TRACE), err(Debug, level = Level::DEBUG))]
     async fn get_page_version(&self, page_id: &str) -> Result<u64> {
         let response = self
-            .get(format!("/wiki/api/v2/pages/{}", page_id).as_ref())
+            .get(format!("/wiki/api/v2/pages/{page_id}").as_ref())
             .await?
             .json::<PageResponse>()
             .await?;
@@ -133,14 +133,14 @@ impl ConfluenceClient {
     #[instrument(skip_all, ret(level = Level::TRACE), err(Debug, level = Level::DEBUG))]
     pub async fn get_page_link(&self, page_id: &str) -> Result<String> {
         let response = self
-            .get(format!("/wiki/api/v2/pages/{}", page_id).as_ref())
+            .get(format!("/wiki/api/v2/pages/{page_id}").as_ref())
             .await?
             .json::<PageResponse>()
             .await?;
         let base = response.links.base;
         let webui = response.links.webui;
 
-        Ok(format!("{}{}", base, webui))
+        Ok(format!("{base}{webui}"))
     }
 
     #[instrument(skip_all, ret(level = Level::TRACE), err(Debug, level = Level::DEBUG))]
@@ -156,7 +156,7 @@ impl ConfluenceClient {
 
     #[instrument(skip_all, ret(level = Level::TRACE), err(Debug, level = Level::DEBUG))]
     pub async fn upload_attachment(&self, page_id: &str, file_path: &str) -> Result<()> {
-        let path = format!("/wiki/rest/api/content/{}/child/attachment", page_id);
+        let path = format!("/wiki/rest/api/content/{page_id}/child/attachment");
 
         let mut header_map = HeaderMap::new();
         header_map.insert("X-Atlassian-Token", HeaderValue::from_static("nocheck"));
@@ -173,7 +173,7 @@ impl ConfluenceClient {
 
     #[instrument(skip_all, ret(level = Level::TRACE), err(Debug, level = Level::DEBUG))]
     async fn get_page_sha(&self, page_id: &str) -> Result<Option<String>> {
-        let path = format!("/wiki/api/v2/pages/{}?include-labels=true", page_id);
+        let path = format!("/wiki/api/v2/pages/{page_id}?include-labels=true");
         let response = self.get(&path).await?.json::<PageResponse>().await?;
 
         let sha_label: String = match response.labels {
@@ -194,14 +194,14 @@ impl ConfluenceClient {
 
     async fn remove_page_restriction(&self, page_id: &str) -> Result<()> {
         let body = Restriction::no_restrictions();
-        let path = format!("/wiki/rest/api/content/{}/restriction", page_id);
+        let path = format!("/wiki/rest/api/content/{page_id}/restriction");
         self.put(&path, &body).await?;
         Ok(())
     }
 
     async fn set_page_read_only(&self, page_id: &str, account_id: &str) -> Result<()> {
         let body = Restriction::read_only(account_id);
-        let path = format!("/wiki/rest/api/content/{}/restriction", page_id);
+        let path = format!("/wiki/rest/api/content/{page_id}/restriction");
         self.put(&path, &body).await?;
         Ok(())
     }
