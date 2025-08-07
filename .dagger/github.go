@@ -32,7 +32,7 @@ func NewGithubClient() *Github {
 	return &Github{
 		client: github.NewClient(nil),
 		owner:  "kerwood",
-		repo:   "dagger-test",
+		repo:   "confluence-updater",
 	}
 }
 

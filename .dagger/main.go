@@ -77,7 +77,7 @@ func (m *ConfluenceUpdater) BuildRuntimeImage(
 
 	container := dag.Container().
 		WithRootfs(rootfs).
-		WithLabel("org.opencontainers.image.source", "https://github.com/kerwood/dagger-test").
+		WithLabel("org.opencontainers.image.source", "https://github.com/kerwood/confluence-updater").
 		WithLabel("org.opencontainers.image.created", time.Now().String()).
 		WithEntrypoint([]string{"/confluence-updater"})
 
@@ -125,7 +125,7 @@ func (m *ConfluenceUpdater) Release(
 	}
 
 	for _, tag := range []string{"latest", cargoVersion} {
-		imageInfo, err := container.Publish(ctx, "ghcr.io/kerwood/dagger-test:"+tag)
+		imageInfo, err := container.Publish(ctx, "ghcr.io/kerwood/confluence-updater:"+tag)
 		if err != nil {
 			return err
 		}
