@@ -2,6 +2,8 @@
 
 [![forthebadge made-with-rust](http://ForTheBadge.com/images/badges/made-with-rust.svg)](https://www.rust-lang.org/)
 
+![Image Size](https://ghcr-badge.egpl.dev/kerwood/confluence-updater/size?tag=latest)
+
 If you prefer keeping your documentation in Git, love writing in Markdown, but need to publish it in Confluence, this tool is for you.
 
 **Confluence Updater** renders your Markdown files into HTML and uploads them to a specified page in your Confluence Cloud instance. The tool assigns each page a SHA label based on its content. If the SHA remains unchanged since the last update, the page is skipped.
@@ -167,6 +169,11 @@ A GitHub Action is available: [Confluence Updater Action](https://github.com/Ker
 ```
 
 ## Release Notes
+
+### v2.3.1
+- Updated crate version in Cargo.toml to correct version.
+- Minor dependency updates.
+- Fixed format macro's to comply with Clippy.
 
 ### v2.3.0
 - Added support for tables.
