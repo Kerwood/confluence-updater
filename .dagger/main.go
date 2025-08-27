@@ -72,13 +72,24 @@ func (m *ConfluenceUpdater) BuildRuntimeImage(
 	// +defaultPath="/"
 	srcDirectory *dagger.Directory,
 ) *dagger.Container {
+
+	fromCtr := dag.Container().
+		From("alpine:latest").
+		WithExec([]string{"apk", "add", "ca-certificates"}).
+		WithExec([]string{"update-ca-certificates"}).
+		WithExec([]string{"adduser", "--disabled-password", "--gecos", "''", "--home", "/", "--shell", "/sbin/nologin", "--no-create-home", "--uid", "1001", "rust"})
+
 	binary := m.CompileBinary(ctx, srcDirectory)
-	rootfs := dag.Directory().WithFile("/confluence-updater", binary)
 
 	container := dag.Container().
-		WithRootfs(rootfs).
 		WithLabel("org.opencontainers.image.source", "https://github.com/kerwood/confluence-updater").
 		WithLabel("org.opencontainers.image.created", time.Now().String()).
+		WithRootfs(dag.Directory()).
+		WithFile("/confluence-updater", binary).
+		WithFile("/etc/passwd", fromCtr.File("/etc/passwd")).
+		WithFile("/etc/group", fromCtr.File("/etc/group")).
+		WithDirectory("/etc/ssl/certs", fromCtr.Directory("/etc/ssl/certs")).
+		WithUser("1001").
 		WithEntrypoint([]string{"/confluence-updater"})
 
 	return container
