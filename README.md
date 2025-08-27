@@ -2,7 +2,7 @@
 
 [![forthebadge made-with-rust](http://ForTheBadge.com/images/badges/made-with-rust.svg)](https://www.rust-lang.org/)
 
-![Image Size](https://ghcr-badge.egpl.dev/kerwood/confluence-updater/size?tag=latest)
+![Image Size](https://ghcr-badge.linuxnet.io/kerwood/confluence-updater/size?tag=latest)
 
 If you prefer keeping your documentation in Git, love writing in Markdown, but need to publish it in Confluence, this tool is for you.
 
