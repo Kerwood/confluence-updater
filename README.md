@@ -2,7 +2,7 @@
 
 [![forthebadge made-with-rust](http://ForTheBadge.com/images/badges/made-with-rust.svg)](https://www.rust-lang.org/)
 
-![Image Size](https://ghcr-badge.linuxnet.io/kerwood/confluence-updater/size?tag=latest)
+![Image Size](https://ghcr-badge.linuxnet.io/kerwood/confluence-updater/tags?ignore=&n=2&label=image+tags) ![Image Size](https://ghcr-badge.linuxnet.io/kerwood/confluence-updater/size?tag=latest)
 
 If you prefer keeping your documentation in Git, love writing in Markdown, but need to publish it in Confluence, this tool is for you.
 
@@ -59,6 +59,31 @@ Options:
   -h, --help                       Print help
   -V, --version                    Print version
 ```
+
+### Docker
+
+A prebuilt container image is available. You can run it with the following command:
+```sh
+docker run --rm ghcr.io/kerwood/confluence-updater:latest \
+  -u your-user@example.org \
+  -s <api-token> \
+  --fqdn https://your-domain.atlassian.net
+```
+
+### Dagger
+
+A Dagger module is also available to integrate Confluence Updater into your own workflow.
+
+You can use the module in two ways:
+ - Install it into your own Dagger module
+ - Use it as a blueprint like the example below.
+
+```sh
+export TOKEN=<your-atlassian-token>
+dagger -c 'with-fqdn https://your-domain.atlassian.net | with-user your-user@example.org | with-token env://TOKEN | run-update'
+```
+
+More information can be found [here](https://github.com/Kerwood/dagger-modules/tree/main/confluence-updater).
 
 ## Features
 ### Content Update
