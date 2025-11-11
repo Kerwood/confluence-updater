@@ -106,6 +106,19 @@ Convert relative Markdown file links to Confluence page links using `pid:<page-i
 [Some link text](./other/file.md "pid:5234523")
 ```
 
+### Override Title
+If the first markdown node in the document is an H1 header, it will be used as the page title in Confluence,
+and the header node will be removed from the document.
+You can override this behavior by setting the overrideTitle property in the configuration, the H1 header will still be removed from the document.
+
+#### Example
+```yaml
+pages:
+  - filePath: ./path/to/markdown-1.md
+    pageId: 353468432
+    overrideTitle: Some Other Title
+```
+
 ### Read-Only
 If the `readOnly` property is **not** set at the global and page level configuration, Confluence Updater will not
 modify any existing page restrictions. This allows page restrictions to be set manually within Confluence without
@@ -196,6 +209,10 @@ A GitHub Action is available: [Confluence Updater Action](https://github.com/Ker
 ```
 
 ## Release Notes
+
+### v2.3.2
+- Updated crate versions in Cargo.toml and adjusted code for compatibility.
+- Updates the `pa-token` label by replacing all dots (`.`) with hyphens (`-`) https://github.com/Kerwood/confluence-updater/pull/13
 
 ### v2.3.1
 - Updated crate version in Cargo.toml to correct version.
