@@ -17,7 +17,7 @@ Generate an API token at: [Atlassian API Tokens.](https://id.atlassian.com/manag
 
 The tool applies a label using the local part of the email associated with the token. For example, `patrick@kerwood.dk` will have the label `pa-token/patrick` applied. This labeling system helps track and replace tokens when necessary.
 
-**Note:** If the email username contains a dot (e.g., `john.doe@example.com`), the `pa-token/` label will not be applied since Confluence labels cannot contain dots. A warning will be logged in this case.
+**Note:** If the email username contains dots (e.g., `john.doe@example.com`), they will be replaced with hyphens to create a valid Confluence label. For example, `john.doe@example.com` will result in the label `pa-token/john-doe`.
 
 By setting the `superscriptHeader` property in the configuration, you can quickly locate Confluence pages linked to a specific repository.
 
