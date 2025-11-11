@@ -8,7 +8,7 @@ use reqwest::{
     ClientBuilder, Response,
 };
 use serde::Deserialize;
-use tracing::{debug, error, info, instrument, warn, Level};
+use tracing::{debug, error, info, instrument, Level};
 
 #[derive(Deserialize, Debug)]
 pub struct PageResponse {
@@ -224,16 +224,12 @@ impl ConfluenceClient {
             .split_once("@")
             .ok_or(Error::CurrentUserEmailMissing)?
             .0
-            .to_string();
+            .replace(".", "-");
 
-        let mut labels = vec![format!("page-sha/{}", page.page_sha)];
-
-        // Add pa-token label only if user_label doesn't contain a dot
-        if user_label.contains('.') {
-            warn!("user label '{}' contains a dot and cannot be used as a Confluence label, skipping pa-token label", user_label);
-        } else {
-            labels.push(format!("pa-token/{}", user_label));
-        }
+        let labels = vec![
+            format!("page-sha/{}", page.page_sha),
+            format!("pa-token/{}", user_label),
+        ];
 
         for image_path in &page.html.image_paths {
             info!("uploading attachment [{}]", &image_path);
