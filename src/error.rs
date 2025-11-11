@@ -7,6 +7,9 @@ pub enum Error {
     #[error("Could not read the config file: {0}")]
     IO(#[from] std::io::Error),
 
+    #[error("std:fmt:Error: {0}")]
+    Fmt(#[from] std::fmt::Error),
+
     #[error("Cound not parse YAML in config file: {0}")]
     SerdeYml(#[from] serde_yml::Error),
 
