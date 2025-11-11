@@ -224,7 +224,7 @@ impl ConfluenceClient {
             .split_once("@")
             .ok_or(Error::CurrentUserEmailMissing)?
             .0
-            .to_string();
+            .replace(".", "-");
 
         let labels = vec![
             format!("page-sha/{}", page.page_sha),

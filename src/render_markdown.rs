@@ -80,13 +80,13 @@ impl HtmlPage {
             root_node.prepend(super_node);
         }
 
-        let mut html_bytes = vec![];
-        format_html(root_node, &options, &mut html_bytes)?;
+        let mut html = String::new();
+        format_html(root_node, &options, &mut html)?;
 
         Ok(HtmlPage {
             image_paths,
             page_header: title,
-            html: String::from_utf8(html_bytes)?,
+            html,
         })
     }
 }
@@ -97,7 +97,7 @@ impl HtmlPage {
 
 // Gets all filesystem paths for images for later uploading.
 fn get_image_paths(root_node: NodeRef<'_>, md_file_path: &str) -> Vec<String> {
-    let get_image_node_link = |node: NodeRef<'_>| match &node.data.borrow().value {
+    let get_image_node_link = |node: NodeRef<'_>| match &node.data().value {
         NodeValue::Image(node_link) => Some(node_link.url.clone()),
         _ => None,
     };
@@ -129,7 +129,7 @@ fn get_image_paths(root_node: NodeRef<'_>, md_file_path: &str) -> Vec<String> {
 
     root_node
         .descendants()
-        .filter(|node| matches!(node.data.borrow().value, NodeValue::Image(_)))
+        .filter(|node| matches!(node.data().value, NodeValue::Image(_)))
         .filter_map(get_image_node_link)
         .filter(|x| !x.starts_with("https://") && !x.starts_with("http://"))
         .filter_map(is_relative_path)
@@ -143,7 +143,7 @@ fn get_image_paths(root_node: NodeRef<'_>, md_file_path: &str) -> Vec<String> {
 // Retrieves the NodeValue::Text if the first child is a h1 header, and then removes it.
 fn get_and_remove_h1_header(root_node: NodeRef<'_>) -> Option<String> {
     let first_child = root_node.first_child()?;
-    let child_value = &first_child.data.borrow().value;
+    let child_value = &first_child.data().value;
 
     if !matches!(child_value, NodeValue::Heading(heading) if heading.level == 1) {
         return None;
@@ -152,7 +152,7 @@ fn get_and_remove_h1_header(root_node: NodeRef<'_>) -> Option<String> {
     let mut title = String::new();
 
     for child in first_child.children() {
-        if let NodeValue::Text(text) = &child.data.borrow().value {
+        if let NodeValue::Text(text) = &child.data().value {
             title.push_str(text);
         }
     }
@@ -167,11 +167,11 @@ fn get_and_remove_h1_header(root_node: NodeRef<'_>) -> Option<String> {
 fn replace_image_node_with_html(root_node: NodeRef<'_>) {
     let image_nodes = root_node
         .descendants()
-        .filter(|node| matches!(node.data.borrow().value, NodeValue::Image(_)))
+        .filter(|node| matches!(node.data().value, NodeValue::Image(_)))
         .collect::<Vec<_>>();
 
     for image_node in image_nodes {
-        let mut image_node_data = image_node.data.borrow_mut();
+        let mut image_node_data = image_node.data_mut();
 
         if let NodeValue::Image(node_link) = &image_node_data.value {
             if node_link.url.starts_with("https://") || node_link.url.starts_with("http://") {
@@ -186,7 +186,7 @@ fn replace_image_node_with_html(root_node: NodeRef<'_>) {
             let mut alignment = Align::Left;
 
             if let Some(child) = image_node.first_child() {
-                if let NodeValue::Text(image_alt_text) = &child.data.borrow().value {
+                if let NodeValue::Text(image_alt_text) = &child.data().value {
                     alignment = Align::from_str(image_alt_text);
                 }
             }
@@ -218,11 +218,11 @@ fn replace_image_node_with_html(root_node: NodeRef<'_>) {
 fn replace_codeblock_with_html(root_node: NodeRef<'_>) {
     let codeblock_nodes: Vec<_> = root_node
         .descendants()
-        .filter(|node| matches!(node.data.borrow().value, NodeValue::CodeBlock(_)))
+        .filter(|node| matches!(node.data().value, NodeValue::CodeBlock(_)))
         .collect();
 
     for node in codeblock_nodes {
-        let mut node_data = node.data.borrow_mut();
+        let mut node_data = node.data_mut();
 
         if let NodeValue::CodeBlock(codeblock) = &node_data.value {
             let language = match codeblock.info.is_empty() {
@@ -249,7 +249,7 @@ fn replace_codeblock_with_html(root_node: NodeRef<'_>) {
 async fn replace_page_link(root_node: NodeRef<'_>) -> Result<()> {
     let link_nodes: Vec<_> = root_node
         .descendants()
-        .filter(|node| matches!(node.data.borrow().value, NodeValue::Link(_)))
+        .filter(|node| matches!(node.data().value, NodeValue::Link(_)))
         .collect();
 
     let fqdn = FQDN.get().unwrap().to_string();
@@ -259,7 +259,7 @@ async fn replace_page_link(root_node: NodeRef<'_>) -> Result<()> {
     for node in link_nodes {
         // Borrowing node value in its own scope to prevent holding refcell across await point
         let link_title = {
-            let node_value = &node.data.borrow().value;
+            let node_value = &node.data().value;
             match node_value {
                 NodeValue::Link(link) if !link.title.is_empty() => link.title.to_string(),
                 _ => continue,
@@ -279,7 +279,7 @@ async fn replace_page_link(root_node: NodeRef<'_>) -> Result<()> {
         let client = ConfluenceClient::new(&fqdn, &user, &secret)?;
         let page_url = client.get_page_link(page_id).await?;
 
-        let node_value = &mut node.data.borrow_mut().value;
+        let node_value = &mut node.data_mut().value;
         if let NodeValue::Link(ref mut link) = node_value {
             link.url = page_url;
         }
