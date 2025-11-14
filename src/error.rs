@@ -32,6 +32,9 @@ pub enum Error {
 
     #[error("Failed to get the local part of the current user email.")]
     CurrentUserEmailMissing,
+
+    #[error("Unsupported video format found: [{0}]. Only mp4, mov, and avi are supported.")]
+    UnsupportedVideoFormat(String),
 }
 
 pub type Result<T, E = Error> = std::result::Result<T, E>;
