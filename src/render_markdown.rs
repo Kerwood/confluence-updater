@@ -6,6 +6,7 @@ use comrak::{
     parse_document, Arena, Options,
 };
 use normalize_path::NormalizePath;
+use scraper::{Html, Selector};
 use serde::Deserialize;
 use std::{cell::RefCell, collections::HashSet, path::Path};
 use tracing::{debug, instrument, warn, Level};
@@ -50,7 +51,7 @@ impl std::fmt::Display for Align {
 
 #[derive(Deserialize, Debug)]
 pub struct HtmlPage {
-    pub image_paths: Vec<String>,
+    pub attachment_paths: Vec<String>,
     pub page_header: Option<String>,
     pub html: String,
 }
@@ -68,10 +69,15 @@ impl HtmlPage {
         let root_node = parse_document(&arena, &md_file, &options);
 
         let title = get_and_remove_h1_header(root_node);
+        let mut attachment_paths: Vec<String> = Vec::new();
         let image_paths = get_image_paths(root_node, &page_config.file_path);
+        let video_paths = get_video_paths(root_node, &page_config.file_path)?;
+        attachment_paths.extend(image_paths);
+        attachment_paths.extend(video_paths);
 
         replace_codeblock_with_html(root_node);
         replace_image_node_with_html(root_node);
+        replace_video_node_with_html(root_node);
         replace_page_link(root_node).await?;
 
         if let Some(sup) = &page_config.superscript_header {
@@ -84,7 +90,7 @@ impl HtmlPage {
         format_html(root_node, &options, &mut html)?;
 
         Ok(HtmlPage {
-            image_paths,
+            attachment_paths,
             page_header: title,
             html,
         })
@@ -140,6 +146,102 @@ fn get_image_paths(root_node: NodeRef<'_>, md_file_path: &str) -> Vec<String> {
         .collect::<Vec<String>>()
 }
 
+// Gets all filesystem paths for videos for later uploading.
+fn get_video_paths(root_node: NodeRef<'_>, md_file_path: &str) -> Result<Vec<String>> {
+    let get_video_node_link = |node: NodeRef<'_>| {
+        let data = node.data();
+        let literal = match &data.value {
+            NodeValue::HtmlBlock(node_html) => &node_html.literal,
+            NodeValue::HtmlInline(node_html) => node_html,
+            _ => return None,
+        };
+
+        let video_selector = Selector::parse("video").expect("Failed to parse video selector");
+        let source_selector = Selector::parse("source").expect("Failed to parse source selector");
+        let mut video_srcs = Vec::new();
+
+        let html_fragment = Html::parse_fragment(literal);
+
+        for element in html_fragment.select(&video_selector) {
+            if let Some(src) = element.value().attr("src") {
+                video_srcs.push(src.to_string());
+            } else {
+                for source_element in element.select(&source_selector) {
+                    if let Some(src) = source_element.value().attr("src") {
+                        video_srcs.push(src.to_string());
+                    }
+                }
+            }
+        }
+
+        if video_srcs.is_empty() {
+            None
+        } else {
+            Some(video_srcs)
+        }
+    };
+
+    let video_sources: Vec<String> = root_node
+        .descendants()
+        .filter_map(get_video_node_link)
+        .flatten()
+        .collect();
+
+    for src in &video_sources {
+        if src.starts_with("http://") || src.starts_with("https://") {
+            continue;
+        }
+        if let Some(ext) = Path::new(src).extension().and_then(|s| s.to_str()) {
+            match ext.to_lowercase().as_str() {
+                "mp4" | "mov" | "avi" => {}
+                _ => return Err(crate::error::Error::UnsupportedVideoFormat(src.clone())),
+            }
+        } else {
+            // If there's no extension, we can't validate it.
+            // Depending on desired behavior, you could error out or allow it.
+            // Here, we'll be strict and consider it an error if we can't determine the type.
+            return Err(crate::error::Error::UnsupportedVideoFormat(src.clone()));
+        }
+    }
+
+    let is_relative_path = |path: String| match Path::new(&path).has_root() {
+        true => {
+            warn!("video path is not a relative path, skipping. [{}]", path);
+            None
+        }
+        false => Some(path),
+    };
+
+    let is_valid_path = |path: String| match Path::new(&path).is_file() {
+        true => Some(path),
+        false => {
+            warn!("video path not valid file path, skipping: [{}]", path);
+            None
+        }
+    };
+
+    // Join the *.md file path with the image path to convert the relative path to an absolut.
+    let convert_to_full_path = |path: String| {
+        Path::new(md_file_path)
+            .with_file_name(&path)
+            .normalize()
+            .to_str()
+            .map(|x| x.to_string())
+    };
+
+    let collected_paths = video_sources
+        .into_iter()
+        .filter(|x| !x.starts_with("https://") && !x.starts_with("http://"))
+        .filter_map(is_relative_path)
+        .filter_map(convert_to_full_path)
+        .filter_map(is_valid_path)
+        .collect::<HashSet<_>>()
+        .into_iter()
+        .collect::<Vec<String>>();
+
+    Ok(collected_paths)
+}
+
 // Retrieves the NodeValue::Text if the first child is a h1 header, and then removes it.
 fn get_and_remove_h1_header(root_node: NodeRef<'_>) -> Option<String> {
     let first_child = root_node.first_child()?;
@@ -161,6 +263,70 @@ fn get_and_remove_h1_header(root_node: NodeRef<'_>) -> Option<String> {
     first_child.detach();
 
     Some(title)
+}
+
+// Replaces all video Nodes with custom HTML in Confluence storage format.
+fn replace_video_node_with_html(root_node: NodeRef<'_>) {
+    let video_nodes = root_node
+        .descendants()
+        .filter(|node| {
+            let data = node.data();
+            match &data.value {
+                NodeValue::HtmlBlock(node_html) => node_html.literal.contains("<video"),
+                NodeValue::HtmlInline(node_html) => node_html.contains("<video"),
+                _ => false,
+            }
+        })
+        .collect::<Vec<_>>();
+
+    for video_node in video_nodes {
+        let mut video_node_data = video_node.data_mut();
+
+        let literal = match &video_node_data.value {
+            NodeValue::HtmlBlock(node_html) => node_html.literal.clone(),
+            NodeValue::HtmlInline(node_html) => node_html.clone(),
+            _ => continue,
+        };
+
+        let html_fragment = Html::parse_fragment(&literal);
+        let video_selector = Selector::parse("video").expect("Failed to parse video selector");
+        let source_selector = Selector::parse("source").expect("Failed to parse source selector");
+
+        if let Some(element) = html_fragment.select(&video_selector).next() {
+            let src_val = if let Some(src) = element.value().attr("src") {
+                Some(src.to_string())
+            } else if let Some(source_element) = element.select(&source_selector).next() {
+                source_element.value().attr("src").map(|s| s.to_string())
+            } else {
+                None
+            };
+
+            if let Some(src_val) = src_val {
+                if src_val.starts_with("https://") || src_val.starts_with("http://") {
+                    continue;
+                }
+
+                let file_name = Path::new(&src_val)
+                    .file_name()
+                    .and_then(|name| name.to_str())
+                    .unwrap_or("");
+
+                let raw_html_node = format!(
+                    r#"
+                    <p>
+                    <ac:image>
+                        <ri:attachment ri:filename="{file_name}" />
+                    </ac:image>
+                    </p>
+                "#
+                )
+                .trim()
+                .to_string();
+
+                video_node_data.value = NodeValue::Raw(raw_html_node);
+            }
+        }
+    }
 }
 
 // Replaces all Image Nodes with custom HTML in Confluence storage format.

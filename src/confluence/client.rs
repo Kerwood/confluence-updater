@@ -231,7 +231,7 @@ impl ConfluenceClient {
             format!("pa-token/{}", user_label),
         ];
 
-        for image_path in &page.html.image_paths {
+        for image_path in &page.html.attachment_paths {
             info!("uploading attachment [{}]", &image_path);
             self.upload_attachment(&page.page_id, image_path)
                 .await
